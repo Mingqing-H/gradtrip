@@ -5,13 +5,13 @@
  *   （成员改城市后旧值不适用，BR-04）。
  * - invitationId 在组织者本地登记（InvitationRecord），反馈必须对应登记的邀请。
  */
+import type { InvitationRecord } from '../types';
 import { SHARING_LIMITS, sharingError } from './types';
 import type {
   InvitationBody,
-  SharingApplyResult,
-  SharingContext,
-  SharingDeps,
   SharingEnvelope,
+  SharingError,
+  SharingPlanning,
   SharingResult,
   Trip,
 } from './types';
@@ -22,7 +22,7 @@ export interface BuildInvitationOptions {
   includeManualTransport: boolean;
   payloadId: string;
   now: string;
-  deps: SharingDeps;
+  planning: SharingPlanning;
 }
 
 export const DEFAULT_INVITATION_INSTRUCTIONS =
@@ -32,7 +32,7 @@ export function buildInvitationEnvelope(
   trip: Trip,
   options: BuildInvitationOptions,
 ): SharingResult<SharingEnvelope<InvitationBody>> {
-  const { deps, now, payloadId, memberId, includeManualTransport } = options;
+  const { planning, now, payloadId, memberId, includeManualTransport } = options;
   const member = trip.members.find((item) => item.id === memberId);
   if (!member) {
     return { ok: false, error: sharingError('MEMBER_NOT_FOUND', '目标成员不存在，无法生成邀请') };
@@ -40,7 +40,6 @@ export function buildInvitationEnvelope(
   if (trip.plans.length === 0) {
     return { ok: false, error: sharingError('PLAN_NOT_FOUND', '还没有候选方案，无法生成邀请') };
   }
-
   const templateVersions = new Set(trip.plans.map((plan) => plan.templateVersion));
   if (templateVersions.size !== 1) {
     return {
@@ -54,7 +53,7 @@ export function buildInvitationEnvelope(
     tripName: trip.name,
     member: { id: member.id, name: member.name },
     constraintRevision: trip.constraintRevision,
-    templateVersion: trip.plans[0]!.templateVersion,
+    templateVersion: trip.plans[0].templateVersion,
     searchWindow: trip.searchWindow,
     duration: trip.duration,
     plans: trip.plans.map((plan) => {
@@ -64,14 +63,16 @@ export function buildInvitationEnvelope(
         manual !== null &&
         member.originCity !== null &&
         manual.originCity === member.originCity;
-      const destination = deps.destinationInfo(plan.destinationId);
+      const template = planning.getTemplate(plan.destinationId, plan.templateVersion);
+      const destinationName = template.ok ? template.value.name : `目的地 ${plan.destinationId}`;
+      const destinationTags = template.ok ? template.value.tags : [];
       return {
         id: plan.id,
         version: plan.version,
         templateVersion: plan.templateVersion,
         destinationId: plan.destinationId,
-        destinationName: destination?.name ?? `目的地 ${plan.destinationId}`,
-        destinationTags: destination?.tags ?? [],
+        destinationName,
+        destinationTags,
         startDate: plan.startDate,
         days: plan.days,
         estimate: {
@@ -95,50 +96,31 @@ export function buildInvitationEnvelope(
 // 邀请登记命令（BR-13：invitationId 在组织者本地登记后才生成）
 // ---------------------------------------------------------------------------
 
-export interface RegisterInvitationCommand {
-  kind: 'sharing.registerInvitation';
-  invitationId: string;
-  memberId: string;
-}
-
+/**
+ * 登记 InvitationRecord：payload 由应用层按当前方案构建（B0 命令契约），
+ * 此处校验成员存在、ID 唯一与上限，返回新 Trip（revision 由仓库事务递增）。
+ */
 export function registerInvitationToTrip(
   trip: Trip,
-  command: RegisterInvitationCommand,
-  context: SharingContext,
-  limits: { invitations: number } = { invitations: SHARING_LIMITS.invitations },
-): SharingApplyResult {
-  const member = trip.members.find((item) => item.id === command.memberId);
-  if (!member) {
-    return { status: 'rejected', error: sharingError('MEMBER_NOT_FOUND', '目标成员不存在') };
+  invitation: InvitationRecord,
+): { ok: true; value: Trip } | { ok: false; error: SharingError } {
+  if (!trip.members.some((item) => item.id === invitation.memberId)) {
+    return { ok: false, error: sharingError('MEMBER_NOT_FOUND', '目标成员不存在') };
   }
-  if (trip.invitations.some((record) => record.id === command.invitationId)) {
+  if (trip.invitations.some((record) => record.id === invitation.id)) {
     return {
-      status: 'rejected',
+      ok: false,
       error: sharingError('ID_CONFLICT', '该邀请标识已登记，请重新生成邀请'),
     };
   }
-  if (trip.invitations.length >= limits.invitations) {
+  if (trip.invitations.length >= SHARING_LIMITS.invitations) {
     return {
-      status: 'rejected',
-      error: sharingError('LIMIT_EXCEEDED', `邀请登记已达上限（${limits.invitations} 条），请先清理或导出`),
+      ok: false,
+      error: sharingError('LIMIT_EXCEEDED', `邀请登记已达上限（${SHARING_LIMITS.invitations} 条）`),
     };
   }
-  const planVersions: Record<string, number> = {};
-  for (const plan of trip.plans) {
-    planVersions[plan.id] = plan.version;
-  }
-  const nextTrip: Trip = {
-    ...trip,
-    invitations: [
-      ...trip.invitations,
-      {
-        id: command.invitationId,
-        memberId: command.memberId,
-        constraintRevision: trip.constraintRevision,
-        planVersions,
-        createdAt: context.now,
-      },
-    ],
+  return {
+    ok: true,
+    value: { ...trip, invitations: [...trip.invitations, { ...invitation, planVersions: { ...invitation.planVersions } }] },
   };
-  return { status: 'updated', trip: nextTrip };
 }

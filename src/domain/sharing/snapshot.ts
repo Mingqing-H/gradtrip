@@ -4,12 +4,12 @@
  * - 日程超出该方案日期范围时阻止生成，并返回越界条目定位（BR-08/BR-13）。
  * - 另存为我的旅行：生成全新 tripId 与实体 ID，不继承确认、意向、邀请或账本（BR-15）。
  */
-import { addDays, planDateRange } from './calendar';
+import { addDays } from '../dates';
 import { sharingError } from './types';
 import type {
   PublicActivity,
-  SharingDeps,
   SharingEnvelope,
+  SharingPlanning,
   SharingResult,
   SnapshotBody,
   Trip,
@@ -21,7 +21,9 @@ export interface BuildSnapshotOptions {
   planId?: string;
   payloadId: string;
   now: string;
-  deps: SharingDeps;
+  /** 共识状态按数据重新求值（BR-07），由 T02 服务计算。 */
+  today: string;
+  planning: SharingPlanning;
 }
 
 export interface OutOfRangeActivityRef {
@@ -45,11 +47,21 @@ function toPublicActivity(activity: Trip['itinerary']['activities'][number]): Pu
   };
 }
 
+function destinationDisplay(
+  planning: SharingPlanning,
+  destinationId: string,
+  templateVersion: number,
+): { name: string; tags: string[] } {
+  const template = planning.getTemplate(destinationId, templateVersion);
+  if (template.ok) return { name: template.value.name, tags: template.value.tags };
+  return { name: `目的地 ${destinationId}`, tags: [] };
+}
+
 export function buildPublicSnapshot(
   trip: Trip,
   options: BuildSnapshotOptions,
 ): SharingResult<SharingEnvelope<SnapshotBody>> {
-  const { deps, now, payloadId } = options;
+  const { planning, now, payloadId, today } = options;
   const wantedPlanId = options.planId ?? trip.confirmation?.planId ?? null;
   if (wantedPlanId === null) {
     return { ok: false, error: sharingError('PLAN_NOT_FOUND', '旅行还没有可选方案，无法生成快照') };
@@ -60,7 +72,7 @@ export function buildPublicSnapshot(
   }
 
   // 日程范围外条目阻止生成（BR-13：要求调整后才可导出，提供定位）。
-  const planRange = planDateRange(plan.startDate, plan.days);
+  const planRange = { start: plan.startDate, end: addDays(plan.startDate, plan.days - 1) };
   const outOfRange: OutOfRangeActivityRef[] = trip.itinerary.activities
     .filter((activity) => activity.date < planRange.start || activity.date > planRange.end)
     .map((activity) => ({ id: activity.id, title: activity.title, date: activity.date }));
@@ -74,9 +86,9 @@ export function buildPublicSnapshot(
   }
 
   // 生成时刻的确认状态：仅当派生状态为已确认且确认记录指向当前方案版本时标记 confirmed。
-  const status = deps.confirmationStatus(trip);
+  const consensus = planning.getConsensusStatus(trip, plan.id, today);
   const confirmed =
-    status === 'confirmed' &&
+    consensus.confirmed &&
     trip.confirmation !== null &&
     trip.confirmation.planId === plan.id &&
     trip.confirmation.planVersion === plan.version;
@@ -85,13 +97,12 @@ export function buildPublicSnapshot(
     planId: plan.id,
     planVersion: plan.version,
     constraintRevision: trip.constraintRevision,
-    confirmedAt: confirmed ? trip.confirmation!.confirmedAt : null,
+    confirmedAt: confirmed && trip.confirmation ? trip.confirmation.confirmedAt : null,
   };
 
   // 公开估算总览：不含任何成员个人交通；日程差额按 BR-08 的 E'=E-A+S 逻辑展示 S 与 S-A。
-  const perNight = plan.days - 1;
   const basePerPerson =
-    plan.estimate.lodgingPerNight * perNight +
+    plan.estimate.lodgingPerNight * (plan.days - 1) +
     plan.estimate.foodPerDay * plan.days +
     plan.estimate.activities +
     plan.estimate.reserve;
@@ -106,7 +117,7 @@ export function buildPublicSnapshot(
     (activity) => activity.perPersonEstimate === null,
   ).length;
 
-  const destination = deps.destinationInfo(plan.destinationId);
+  const destination = destinationDisplay(planning, plan.destinationId, plan.templateVersion);
   const body: SnapshotBody = {
     tripName: trip.name,
     plan: {
@@ -114,8 +125,8 @@ export function buildPublicSnapshot(
       version: plan.version,
       templateVersion: plan.templateVersion,
       destinationId: plan.destinationId,
-      destinationName: destination?.name ?? `目的地 ${plan.destinationId}`,
-      destinationTags: destination?.tags ?? [],
+      destinationName: destination.name,
+      destinationTags: destination.tags,
       startDate: plan.startDate,
       days: plan.days,
       estimateParams: {

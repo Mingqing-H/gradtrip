@@ -1,106 +1,99 @@
 /**
  * 四类传递载荷的运行时白名单 schema（BR-13）。
  *
- * envelope 结构为 T04 自维护的白名单；核心实体结构以 MVP_DEVELOPMENT §4
- * 的 Trip 契约为准。所有对象使用 strictObject：未知字段一律拒绝，
- * 不执行载荷文本（BR-13），语义校验（引用/不变量/版本）在领域函数中进行。
+ * envelope 结构为 T04 自维护的白名单；基础标量（ID/金额/日期/成员/活动）
+ * 直接复用 B0 的 src/domain/schema.ts，保证导入边界与存储校验一致。
+ * 所有对象使用 strictObject：未知字段一律拒绝，不执行载荷文本（BR-13）；
+ * 跨字段语义校验（引用/不变量/版本）在领域函数中进行。
  */
 import { z } from 'zod';
-import { isCalendarDate } from './calendar';
-import { SHARING_LIMITS, SHARING_SCHEMA_VERSION, sharingError } from './types';
+import {
+  centsSchema,
+  dateSchema,
+  idSchema,
+  memberSchema,
+  rangeSchema,
+} from '../schema';
+import { SHARING_SCHEMA_VERSION, sharingError } from './types';
 import type { BackupBody, InvitationBody, ResponseBody, SharingResult, SnapshotBody } from './types';
 
 // ---------------------------------------------------------------------------
-// 基础标量
+// 基础标量（与 B0 schema 对齐）
 // ---------------------------------------------------------------------------
 
-const dateOnly = z
-  .string()
-  .regex(/^\d{4}-\d{2}-\d{2}$/, '日期必须为 YYYY-MM-DD')
-  .refine(isCalendarDate, { message: '日期不存在' });
-
-const isoTimestamp = z
-  .string()
-  .regex(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d{1,3})?(Z|[+-]\d{2}:\d{2})$/, '时间必须为 ISO 8601');
-
-const idText = z.string().min(1).max(64);
-
-const centsNonNegative = z.number().int().min(0).max(SHARING_LIMITS.maxAmountCents);
-const centsPositive = z.number().int().min(1).max(SHARING_LIMITS.maxAmountCents);
-
+const isoTimestamp = z.iso.datetime();
 const daysValue = z.union([z.literal(2), z.literal(3), z.literal(4), z.literal(5)]);
-
-const range = z
-  .strictObject({
-    start: dateOnly,
-    end: dateOnly,
-  })
-  .refine((value) => value.start <= value.end, { message: '起日不得晚于止日' });
-
-const intentValue = z.enum(['approve', 'acceptable', 'decline']);
-
-const preferences = z
-  .array(z.string().trim().min(1).max(12))
-  .max(8, '偏好标签最多 8 个')
-  .refine((items) => new Set(items).size === items.length, { message: '偏好标签不得重复' });
+const revisionValue = z.number().int().min(0);
+const positiveVersion = z.number().int().min(1);
+const centsPositive = centsSchema.min(1);
+const nameText = z.string().trim().min(1).max(40);
+const cityText = z.string().trim().min(1).max(80);
 
 // ---------------------------------------------------------------------------
 // snapshot 白名单：只含公开计划内容；成员资料、备注、账目、反馈历史全部排除。
 // ---------------------------------------------------------------------------
 
 const publicActivity = z.strictObject({
-  id: idText,
-  date: dateOnly,
-  startTime: z.union([z.null(), z.string().regex(/^\d{2}:\d{2}$/, '时间必须为 HH:mm')]),
-  endTime: z.union([z.null(), z.string().regex(/^\d{2}:\d{2}$/, '时间必须为 HH:mm')]),
-  title: z.string().trim().min(1).max(60),
-  category: z.string().trim().min(1).max(30),
+  id: idSchema,
+  date: dateSchema,
+  startTime: z.string().regex(/^(?:[01]\d|2[0-3]):[0-5]\d$/).nullable(),
+  endTime: z.string().regex(/^(?:[01]\d|2[0-3]):[0-5]\d$/).nullable(),
+  title: z.string().trim().min(1).max(120),
+  category: z.string().min(1).max(40),
   budgetBucket: z.enum(['activities', 'included']),
-  perPersonEstimate: z.union([z.null(), centsNonNegative]),
-  order: z.number().int().min(0),
-});
+  perPersonEstimate: centsSchema.nullable(),
+  order: revisionValue,
+}).refine(
+  (activity) =>
+    (activity.startTime === null && activity.endTime === null) ||
+    (activity.startTime !== null && activity.endTime !== null && activity.startTime < activity.endTime),
+  '请填写有效的起止时间',
+);
 
 const estimateParams = z.strictObject({
-  lodgingPerNight: centsNonNegative,
-  foodPerDay: centsNonNegative,
-  activities: centsNonNegative,
-  reserve: centsNonNegative,
+  lodgingPerNight: centsSchema,
+  foodPerDay: centsSchema,
+  activities: centsSchema,
+  reserve: centsSchema,
 });
 
+const destinationInfo = {
+  destinationId: idSchema,
+  destinationName: z.string().trim().min(1).max(80),
+  destinationTags: z.array(z.string().trim().min(1).max(40)).max(20),
+};
+
 export const snapshotBodySchema = z.strictObject({
-  tripName: z.string().trim().min(1).max(40),
+  tripName: z.string().trim().min(1).max(80),
   plan: z.strictObject({
-    id: idText,
-    version: z.number().int().min(1),
-    templateVersion: z.number().int().min(1),
-    destinationId: idText,
-    destinationName: z.string().trim().min(1).max(40),
-    destinationTags: z.array(z.string().trim().min(1).max(12)).max(8),
-    startDate: dateOnly,
+    id: idSchema,
+    version: positiveVersion,
+    templateVersion: positiveVersion,
+    ...destinationInfo,
+    startDate: dateSchema,
     days: daysValue,
     estimateParams,
   }),
   confirmation: z.strictObject({
     status: z.enum(['confirmed', 'draft']),
-    planId: idText,
-    planVersion: z.number().int().min(1),
-    constraintRevision: z.number().int().min(0),
-    confirmedAt: z.union([z.null(), isoTimestamp]),
+    planId: idSchema,
+    planVersion: positiveVersion,
+    constraintRevision: revisionValue,
+    confirmedAt: isoTimestamp.nullable(),
   }),
   estimateSummary: z.strictObject({
-    basePerPersonCents: centsNonNegative,
-    itineraryActivitiesCents: centsNonNegative,
+    basePerPersonCents: centsSchema,
+    itineraryActivitiesCents: centsSchema,
     itineraryUnknownCount: z.number().int().min(0),
     deltaCents: z.number().int(),
   }),
-  itinerary: z.union([
-    z.null(),
-    z.strictObject({
-      startDate: dateOnly,
-      endDate: dateOnly,
-      activities: z.array(publicActivity).max(SHARING_LIMITS.activities),
-    }),
-  ]),
+  itinerary: z
+    .strictObject({
+      startDate: dateSchema,
+      endDate: dateSchema,
+      activities: z.array(publicActivity),
+    })
+    .nullable(),
 });
 
 // ---------------------------------------------------------------------------
@@ -109,239 +102,84 @@ export const snapshotBodySchema = z.strictObject({
 // ---------------------------------------------------------------------------
 
 export const invitationBodySchema = z.strictObject({
-  tripId: idText,
-  tripName: z.string().trim().min(1).max(40),
-  member: z.strictObject({
-    id: idText,
-    name: z.string().trim().min(1).max(20),
-  }),
-  constraintRevision: z.number().int().min(0),
-  templateVersion: z.number().int().min(1),
-  searchWindow: range,
+  tripId: idSchema,
+  tripName: z.string().trim().min(1).max(80),
+  member: z.strictObject({ id: idSchema, name: nameText }),
+  constraintRevision: revisionValue,
+  templateVersion: positiveVersion,
+  searchWindow: rangeSchema,
   duration: daysValue,
   plans: z
     .array(
       z.strictObject({
-        id: idText,
-        version: z.number().int().min(1),
-        templateVersion: z.number().int().min(1),
-        destinationId: idText,
-        destinationName: z.string().trim().min(1).max(40),
-        destinationTags: z.array(z.string().trim().min(1).max(12)).max(8),
-        startDate: dateOnly,
+        id: idSchema,
+        version: positiveVersion,
+        templateVersion: positiveVersion,
+        ...destinationInfo,
+        startDate: dateSchema,
         days: daysValue,
         estimate: estimateParams.extend({
-          manualTransport: z.union([
-            z.null(),
-            z.strictObject({
-              originCity: z.string().trim().min(1).max(40),
-              amountCents: centsPositive,
-            }),
-          ]),
+          manualTransport: z
+            .strictObject({ originCity: cityText, amountCents: centsPositive })
+            .nullable(),
         }),
       }),
     )
-    .min(1, '邀请必须包含至少一个候选方案')
-    .max(SHARING_LIMITS.plans),
-  instructions: z.string().max(200),
+    .min(1, '邀请必须包含至少一个候选方案'),
+  instructions: z.string().max(500),
 });
 
 // ---------------------------------------------------------------------------
 // response 白名单：成员资料与意向；不含账本、其他成员资料或任意修改指令。
 // ---------------------------------------------------------------------------
 
-export const memberProfileSchema = z.strictObject({
-  name: z.string().trim().min(1, '昵称为必填').max(20, '昵称最多 20 字'),
-  originCity: z.union([z.null(), z.string().trim().min(1, '城市不能为空白').max(40)]),
-  budgetCap: z.union([z.null(), centsNonNegative.max(SHARING_LIMITS.maxAmountCents)]),
-  availability: z.array(range).max(5, '最多 5 段可用日期'),
-  preferences,
-});
+export const memberProfileSchema = memberSchema.omit({ id: true });
 
 export const responseBodySchema = z.strictObject({
-  invitationId: idText,
-  tripId: idText,
-  memberId: idText,
-  memberName: z.string().trim().min(1).max(20),
-  baseConstraintRevision: z.number().int().min(0),
+  invitationId: idSchema,
+  tripId: idSchema,
+  memberId: idSchema,
+  memberName: nameText,
+  baseConstraintRevision: revisionValue,
   profile: memberProfileSchema,
   intents: z
     .array(
       z.strictObject({
-        planId: idText,
-        planVersion: z.number().int().min(1),
-        value: intentValue,
+        planId: idSchema,
+        planVersion: positiveVersion,
+        value: z.enum(['approve', 'acceptable', 'decline']),
       }),
     )
-    .max(SHARING_LIMITS.plans)
     .refine((items) => new Set(items.map((item) => item.planId)).size === items.length, {
       message: '同一方案只能有一条意向',
     }),
 });
 
 // ---------------------------------------------------------------------------
-// backup 白名单：完整单个 Trip；不含应用缓存、其他旅行或 UI 状态。
+// backup：envelope 层只确认形状，Trip 结构与不变量交给 B0 parseTrip 严查，
+// 避免 T04 维护第二份旅行 schema（错误信息也统一来自 parseTrip）。
 // ---------------------------------------------------------------------------
 
-const memberSchema = z.strictObject({
-  id: idText,
-  name: z.string().trim().min(1).max(20),
-  originCity: z.union([z.null(), z.string().trim().min(1).max(40)]),
-  budgetCap: z.union([z.null(), centsNonNegative]),
-  availability: z.array(range).max(5),
-  preferences,
-});
-
-const planSchema = z.strictObject({
-  id: idText,
-  version: z.number().int().min(1),
-  destinationId: idText,
-  templateVersion: z.number().int().min(1),
-  startDate: dateOnly,
-  days: daysValue,
-  estimate: z.strictObject({
-    transportByMember: z.record(
-      z.string(),
-      z.union([
-        z.null(),
-        z.strictObject({
-          originCity: z.string().trim().min(1).max(40),
-          amount: centsPositive,
-        }),
-      ]),
-    ),
-    lodgingPerNight: centsNonNegative,
-    foodPerDay: centsNonNegative,
-    activities: centsNonNegative,
-    reserve: centsNonNegative,
-  }),
-});
-
-const intentSchema = z.strictObject({
-  memberId: idText,
-  planId: idText,
-  planVersion: z.number().int().min(1),
-  constraintRevision: z.number().int().min(0),
-  value: intentValue,
-  source: z.enum(['organizer', 'feedback', 'demo']),
-  recordedAt: isoTimestamp,
-});
-
-const confirmationSchema = z.strictObject({
-  planId: idText,
-  planVersion: z.number().int().min(1),
-  constraintRevision: z.number().int().min(0),
-  confirmedAt: isoTimestamp,
-});
-
-const activitySchema = z.strictObject({
-  id: idText,
-  date: dateOnly,
-  startTime: z.union([z.null(), z.string().regex(/^\d{2}:\d{2}$/, '时间必须为 HH:mm')]),
-  endTime: z.union([z.null(), z.string().regex(/^\d{2}:\d{2}$/, '时间必须为 HH:mm')]),
-  title: z.string().trim().min(1).max(60),
-  category: z.string().trim().min(1).max(30),
-  budgetBucket: z.enum(['activities', 'included']),
-  perPersonEstimate: z.union([z.null(), centsNonNegative]),
-  note: z.string().max(300),
-  order: z.number().int().min(0),
-});
-
-const expenseSchema = z.strictObject({
-  id: idText,
-  title: z.string().trim().min(1).max(60),
-  date: dateOnly,
-  category: z.string().trim().min(1).max(30),
-  amount: centsPositive,
-  payerId: idText,
-  splitMode: z.enum(['equal', 'custom']),
-  allocations: z
-    .array(
-      z.strictObject({
-        memberId: idText,
-        amount: centsNonNegative,
-      }),
-    )
-    .min(1),
-  createdAt: isoTimestamp,
-});
-
-const settlementSchema = z.strictObject({
-  id: idText,
-  commandId: idText,
-  fromId: idText,
-  toId: idText,
-  amount: centsPositive,
-  recordedAt: isoTimestamp,
-  voidedAt: z.union([z.null(), isoTimestamp]),
-});
-
-const invitationRecordSchema = z.strictObject({
-  id: idText,
-  memberId: idText,
-  constraintRevision: z.number().int().min(0),
-  planVersions: z.record(z.string(), z.number().int().min(1)),
-  createdAt: isoTimestamp,
-});
-
-export const tripBackupSchema = z.strictObject({
-  schemaVersion: z.literal(1),
-  id: idText,
-  name: z.string().trim().min(1).max(40),
-  revision: z.number().int().min(0),
-  constraintRevision: z.number().int().min(0),
-  searchWindow: range,
-  duration: daysValue,
-  members: z.array(memberSchema).max(SHARING_LIMITS.members),
-  plans: z.array(planSchema).max(SHARING_LIMITS.plans),
-  intents: z.array(intentSchema).max(SHARING_LIMITS.intents),
-  confirmation: z.union([z.null(), confirmationSchema]),
-  itinerary: z.strictObject({
-    sourcePlanId: z.union([z.null(), idText]),
-    sourcePlanVersion: z.union([z.null(), z.number().int().min(1)]),
-    dateRange: z.union([z.null(), range]),
-    activities: z.array(activitySchema).max(SHARING_LIMITS.activities),
-  }),
-  expenses: z.array(expenseSchema).max(SHARING_LIMITS.expenses),
-  settlements: z.array(settlementSchema).max(SHARING_LIMITS.settlements),
-  invitations: z.array(invitationRecordSchema).max(SHARING_LIMITS.invitations),
-  appliedResponses: z
-    .array(
-      z.strictObject({
-        id: idText,
-        invitationId: idText,
-        appliedAt: isoTimestamp,
-      }),
-    )
-    .max(SHARING_LIMITS.appliedResponses),
-  appliedCommandIds: z.array(idText).max(SHARING_LIMITS.appliedCommandIds),
-  isDemo: z.boolean(),
-  createdAt: isoTimestamp,
-  updatedAt: isoTimestamp,
-});
-
-export const backupBodySchema = z.strictObject({
-  trip: tripBackupSchema,
-});
+export const backupBodySchema = z.strictObject({ trip: z.unknown() });
 
 // ---------------------------------------------------------------------------
 // envelope
 // ---------------------------------------------------------------------------
 
-function envelopeOf<B extends z.ZodTypeAny>(type: string, body: B) {
+function envelopeOf<T extends string, B extends z.ZodType>(type: T, body: B) {
   return z.strictObject({
     schemaVersion: z.literal(SHARING_SCHEMA_VERSION),
     type: z.literal(type),
-    payloadId: idText,
+    payloadId: idSchema,
     createdAt: isoTimestamp,
     body,
   });
 }
 
-export const snapshotEnvelopeSchema = envelopeOf('snapshot', snapshotBodySchema);
-export const invitationEnvelopeSchema = envelopeOf('invitation', invitationBodySchema);
-export const responseEnvelopeSchema = envelopeOf('response', responseBodySchema);
-export const backupEnvelopeSchema = envelopeOf('backup', backupBodySchema);
+export const snapshotEnvelopeSchema = envelopeOf('snapshot' as const, snapshotBodySchema);
+export const invitationEnvelopeSchema = envelopeOf('invitation' as const, invitationBodySchema);
+export const responseEnvelopeSchema = envelopeOf('response' as const, responseBodySchema);
+export const backupEnvelopeSchema = envelopeOf('backup' as const, backupBodySchema);
 
 export const sharingEnvelopeSchema = z.discriminatedUnion('type', [
   snapshotEnvelopeSchema,
@@ -363,24 +201,12 @@ const _responseCheck1: z.infer<typeof responseBodySchema> = null as unknown as R
 const _responseCheck2: ResponseBody = null as unknown as z.infer<typeof responseBodySchema>;
 const _backupCheck1: z.infer<typeof backupBodySchema> = null as unknown as BackupBody;
 const _backupCheck2: BackupBody = null as unknown as z.infer<typeof backupBodySchema>;
-void [
-  _snapshotCheck1,
-  _snapshotCheck2,
-  _invitationCheck1,
-  _invitationCheck2,
-  _responseCheck1,
-  _responseCheck2,
-  _backupCheck1,
-  _backupCheck2,
-];
-
-// ---------------------------------------------------------------------------
-// JSON 解码入口
-// ---------------------------------------------------------------------------
+void [_snapshotCheck1, _snapshotCheck2, _invitationCheck1, _invitationCheck2, _responseCheck1, _responseCheck2, _backupCheck1, _backupCheck2];
 
 /**
  * 从 JSON 文本解析并校验 envelope：损坏 JSON、未知 schemaVersion、未知类型、
  * 白名单外字段都返回结构化错误，不猜测字段意义（BR-13/BR-15）。
+ * backup 的 trip 字段此处保持 unknown，由 validateImportedTrip/parseTrip 严查。
  */
 export function decodeEnvelopeFromJson(text: string): SharingResult<ParsedSharingEnvelope> {
   let parsed: unknown;
@@ -399,7 +225,7 @@ export function decodeEnvelopeFromJson(text: string): SharingResult<ParsedSharin
         ok: false,
         error: sharingError(
           'UNSUPPORTED_SCHEMA_VERSION',
-          `暂不支持 schemaVersion ${record.schemaVersion}，请更新应用后重试`,
+          `暂不支持 schemaVersion ${String(record.schemaVersion)}，请更新应用后重试`,
           { meta: { schemaVersion: record.schemaVersion } },
         ),
       };

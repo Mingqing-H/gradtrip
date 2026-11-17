@@ -1,23 +1,26 @@
 /**
- * 分享域类型：传递 envelope、四类载荷白名单结构、结构化错误与依赖端口。
+ * 分享域类型：传递 envelope、四类载荷白名单结构、结构化错误。
  *
  * 业务规则依据 docs/BUSINESS_RULES.md BR-13～BR-15。
- * 核心实体（Trip/Member/Plan 等）唯一来源是 src/domain/types.ts（B0 冻结契约），
+ * 核心实体（Trip/Member/Plan 等）与命令/规划服务契约唯一来源是 B0：
+ * src/domain/types.ts、src/domain/commands.ts、src/contracts/services.ts，
  * 此处只引用，不重复定义实体。
  */
+import type { BusinessError } from '../../contracts/result';
+import type { PlanningService } from '../../contracts/services';
+import type { ResponseInput } from '../commands';
 import type {
   Activity,
   Cents,
-  Confirmation,
   DateOnly,
-  Expense,
   Id,
+  Intent,
   IntentValue,
-  Member,
   Range,
-  Settlement,
   Trip,
 } from '../types';
+
+export type { Activity, Cents, DateOnly, Id, Intent, Range, Trip };
 
 export type SharingEnvelopeType = 'snapshot' | 'invitation' | 'response' | 'backup';
 
@@ -52,7 +55,7 @@ export interface SnapshotEstimateSummary {
   itineraryActivitiesCents: number;
   /** 公开日程中金额未知的 activities 条目数量。 */
   itineraryUnknownCount: number;
-  /** 日程替换方案活动分项产生的差额 S-A；未知条目存在时该值不代表完整预算。 */
+  /** 日程替换方案活动分项产生的差额 S-A；存在未知条目时该值不代表完整预算。 */
   deltaCents: number;
 }
 
@@ -122,15 +125,6 @@ export interface MemberProfileInput {
   preferences: string[];
 }
 
-/** 经 T02 语义校验与归一化（区间合并等）后的成员资料。 */
-export interface NormalizedMemberProfile {
-  name: string;
-  originCity: string | null;
-  budgetCap: Cents | null;
-  availability: Range[];
-  preferences: string[];
-}
-
 export interface ResponseIntentEntry {
   planId: Id;
   planVersion: number;
@@ -148,7 +142,7 @@ export interface ResponseBody {
 }
 
 export interface BackupBody {
-  trip: Trip;
+  trip: unknown;
 }
 
 export type TypedEnvelope<T extends SharingEnvelopeType> = SharingEnvelope<
@@ -156,7 +150,8 @@ export type TypedEnvelope<T extends SharingEnvelopeType> = SharingEnvelope<
 >;
 
 // ---------------------------------------------------------------------------
-// 结构化错误与结果（页面需要 code/message/字段问题，不能只有 boolean）
+// 结构化错误与结果（页面需要 code/message/字段问题，不能只有 boolean）。
+// 命令执行边界统一转换为 B0 的 Result/BusinessError（contracts/result）。
 // ---------------------------------------------------------------------------
 
 export type SharingErrorCode =
@@ -210,29 +205,71 @@ export function sharingError(
   return extra ? { code, message, ...extra } : { code, message };
 }
 
+/** 分享域错误码 -> B0 BusinessError 错误码（命令边界）。 */
+function toBusinessCode(code: SharingErrorCode): BusinessError['code'] {
+  switch (code) {
+    case 'MEMBER_NOT_FOUND':
+    case 'TRIP_NOT_FOUND':
+    case 'PLAN_NOT_FOUND':
+    case 'INVITATION_NOT_REGISTERED':
+      return 'NOT_FOUND';
+    case 'CONSTRAINT_STALE':
+    case 'PLAN_VERSION_MISMATCH':
+      return 'EXPIRED';
+    case 'DUPLICATE_PAYLOAD':
+    case 'RESUBMISSION_REQUIRES_CHOICE':
+    case 'ID_CONFLICT':
+    case 'TRIP_MISMATCH':
+    case 'MEMBER_MISMATCH':
+      return 'CONFLICT';
+    case 'LIMIT_EXCEEDED':
+    case 'PAYLOAD_TOO_LARGE':
+    case 'URL_TOO_LONG':
+      return 'CAPACITY';
+    case 'SCHEMA_INVALID':
+    case 'BACKUP_INVALID':
+    case 'PROFILE_INVALID':
+    case 'ITINERARY_OUT_OF_RANGE':
+      return 'VALIDATION';
+    default:
+      return 'CORRUPT';
+  }
+}
+
+export function toBusinessError(error: SharingError): BusinessError {
+  return {
+    code: toBusinessCode(error.code),
+    message: error.message,
+    ...(error.fields ? { fields: Object.fromEntries(error.fields.map((f) => [f.field, f.message])) } : {}),
+  };
+}
+
 // ---------------------------------------------------------------------------
 // 命令与应用结果
 // ---------------------------------------------------------------------------
 
-export interface RegisterInvitationPayload {
-  kind: 'sharing.registerInvitation';
-  invitationId: string;
-  memberId: Id;
+/** 供应用层把 wire 格式 ResponseBody 转为 B0 命令的 ResponseInput。 */
+export function responseBodyToInput(envelope: SharingEnvelope<ResponseBody>): ResponseInput {
+  const body = envelope.body;
+  const planVersions: Record<Id, number> = {};
+  for (const entry of body.intents) planVersions[entry.planId] = entry.planVersion;
+  return {
+    id: envelope.payloadId,
+    invitationId: body.invitationId,
+    tripId: body.tripId,
+    memberId: body.memberId,
+    constraintRevision: body.baseConstraintRevision,
+    planVersions,
+    member: {
+      name: body.profile.name,
+      originCity: body.profile.originCity,
+      budgetCap: body.profile.budgetCap,
+      availability: body.profile.availability.map((range) => ({ ...range })),
+      preferences: [...body.profile.preferences],
+    },
+    intents: body.intents.map((entry) => ({ planId: entry.planId, planVersion: entry.planVersion, value: entry.value })),
+  };
 }
-
-export interface ApplyResponsePayload {
-  kind: 'sharing.applyResponse';
-  response: SharingEnvelope<ResponseBody>;
-  /** 同一邀请的重新提交需要用户显式选择替换后才允许应用（BR-14）。 */
-  replacePrevious?: boolean;
-}
-
-export type SharingCommand = RegisterInvitationPayload | ApplyResponsePayload;
-
-export type SharingApplyResult =
-  | { status: 'updated'; trip: Trip }
-  | { status: 'noop'; reason: 'duplicate-payload' }
-  | { status: 'rejected'; error: SharingError };
 
 export type BackupImportAction = 'create' | 'copy' | 'overwrite';
 
@@ -257,60 +294,32 @@ export interface BackupSummary {
   olderThanLocal: boolean;
 }
 
-// ---------------------------------------------------------------------------
-// 依赖端口：日期/估算/共识/成员约束语义归 T01 dates 与 T02 规划服务所有，
-// 集成时由 application/sharing.ts 注入真实实现；测试注入替身。
-// ---------------------------------------------------------------------------
+/** 领域函数依赖 B0 冻结的规划服务接口（成员约束更新、共识查询、模板信息）。 */
+export type SharingPlanning = Pick<
+  PlanningService,
+  'updateMemberConstraints' | 'getConsensusStatus' | 'getTemplate'
+>;
 
-export type ConfirmationStatus = 'preparing' | 'confirmed' | 'stale';
-
-export interface SharingDeps {
-  /** 内置目的地模板信息（名称/标签），供邀请与快照展示。 */
-  destinationInfo(destinationId: Id): { name: string; tags: string[] } | null;
-  /** 派生确认状态（T02 共识查询，按数据重新求值）。 */
-  confirmationStatus(trip: Trip): ConfirmationStatus;
-  /** 成员资料语义校验与归一化（昵称/预算/日期区间/偏好，T02 规则）。 */
-  validateProfile(profile: MemberProfileInput): SharingResult<NormalizedMemberProfile>;
-  /** 相同值不算变化（BR-02），由此决定是否递增 constraintRevision。 */
-  profileChanged(member: Member, profile: NormalizedMemberProfile): boolean;
-  /**
-   * 应用资料变化并使旧意向失效、constraintRevision 加一（T02 辅助函数）。
-   * T04 不得复制失效逻辑，只能通过本端口调用。
-   */
-  applyProfileChange(trip: Trip, memberId: Id, profile: NormalizedMemberProfile): Trip;
-}
-
-/** 命令执行上下文：显式时间与 ID，不隐式读取时钟。 */
+/** 命令执行上下文：显式时间，不隐式读取时钟。 */
 export interface SharingContext {
   now: string;
 }
 
-/** 各集合上限（BR-01/开发文档）；B0 若导出统一常量则在集成时替换来源。 */
+/**
+ * 各集合上限沿用 B0 schema（src/domain/schema.ts）；url/json 上限为分享域自管。
+ */
 export const SHARING_LIMITS = {
   urlBytes: 8000,
   jsonBytes: 1_048_576,
   /** 解码前对编码文本的保守上限（1 MiB JSON 的 Base64URL 展开上限附近）。 */
   encodedFragmentBytes: 1_400_000,
-  maxAmountCents: 10_000_000, // ¥100,000
   members: 20,
   plans: 20,
-  activities: 100,
-  expenses: 200,
-  settlements: 200,
+  activities: 1000,
+  expenses: 2000,
+  settlements: 2000,
   intents: 2000,
   invitations: 1000,
   appliedResponses: 1000,
   appliedCommandIds: 5000,
 } as const;
-
-/** 白名单字段名（用于测试断言隐私范围）。 */
-export const SNAPSHOT_EXCLUDED_KEYS = [
-  'members',
-  'intents',
-  'expenses',
-  'settlements',
-  'invitations',
-  'appliedResponses',
-] as const;
-
-export type { Activity, Cents, Confirmation, DateOnly, Expense, Id, Member, Range, Settlement, Trip };

@@ -1,10 +1,13 @@
 /**
- * T04 测试夹具：Trip 构造工厂与 SharingDeps 替身。
+ * T04 测试夹具：Trip 构造工厂与 PlanningService 替身。
  *
- * 替身按已发布文档规则实现（BR-01/BR-02/BR-07）：
- * 资料校验与归一化、相同值不算变化、约束变化使旧意向失效——
+ * 替身按已发布文档规则实现（BR-01/BR-02/BR-07）：资料校验与归一化、
+ * 相同值不增加 constraintRevision、约束变化使旧意向失效——
  * 生产实现由 T02 通过 B0 公共接口注入，此处仅为测试替身（gitworktree §4.3）。
  */
+import type { Command } from '../../../src/domain/commands';
+import type { PlanningService, DestinationTemplate } from '../../../src/contracts/services';
+import { failure, success } from '../../../src/contracts/result';
 import type {
   Activity,
   Confirmation,
@@ -17,146 +20,136 @@ import type {
   Settlement,
   Trip,
 } from '../../../src/domain/types';
-import { addDays } from '../../../src/domain/sharing/calendar';
-import type {
-  MemberProfileInput,
-  NormalizedMemberProfile,
-  SharingDeps,
-  SharingResult,
-} from '../../../src/domain/sharing/types';
-import { sharingError } from '../../../src/domain/sharing/types';
-
-export const DESTINATIONS: Record<string, { name: string; tags: string[] }> = {
-  dest_qingdao: { name: '青岛', tags: ['海边', '城市'] },
-  dest_suzhou: { name: '苏州', tags: ['人文', '自然'] },
-};
+import { addDays, mergeRanges } from '../../../src/domain/dates';
 
 const NOW = '2026-11-18T10:00:00.000Z';
+const TODAY = '2026-11-18';
 
 export function fixtureNow(): string {
   return NOW;
 }
 
+export function fixtureToday(): string {
+  return TODAY;
+}
+
 export function nextIdFactory(prefix: string, start = 0) {
   let counter = start;
-  return (kind: string, _oldId?: string) => `${prefix}_${kind}_${(counter += 1)}`;
+  return (kind: string) => `${prefix}_${kind}_${(counter += 1)}`;
 }
 
 // ---------------------------------------------------------------------------
-// 日期区间归一（BR-01：重叠或相邻合并）
+// PlanningService 替身
 // ---------------------------------------------------------------------------
 
-export function normalizeRanges(ranges: Range[]): Range[] {
-  const sorted = [...ranges].sort((a, b) => (a.start < b.start ? -1 : a.start > b.start ? 1 : a.end < b.end ? -1 : a.end > b.end ? 1 : 0));
-  const merged: Range[] = [];
-  for (const range of sorted) {
-    const last = merged[merged.length - 1];
-    if (last && range.start <= addDays(last.end, 1)) {
-      if (range.end > last.end) last.end = range.end;
-    } else {
-      merged.push({ ...range });
-    }
-  }
-  return merged;
-}
-
-// ---------------------------------------------------------------------------
-// SharingDeps 替身
-// ---------------------------------------------------------------------------
-
-export function validateProfileFixture(profile: MemberProfileInput): SharingResult<NormalizedMemberProfile> {
-  const fields: Array<{ field: string; message: string }> = [];
-  const name = profile.name.trim();
-  if (name.length < 1 || name.length > 20) fields.push({ field: 'profile.name', message: '昵称需为 1～20 字' });
-  if (profile.originCity !== null && profile.originCity.trim().length < 1) {
-    fields.push({ field: 'profile.originCity', message: '城市不能为空白' });
-  }
-  if (profile.budgetCap !== null && (profile.budgetCap < 0 || profile.budgetCap > 10_000_000 || !Number.isInteger(profile.budgetCap))) {
-    fields.push({ field: 'profile.budgetCap', message: '预算需为 0～¥100,000 的整数分' });
-  }
-  if (profile.availability.length > 5) {
-    fields.push({ field: 'profile.availability', message: '最多 5 段可用日期' });
-  }
-  for (const range of profile.availability) {
-    if (range.start > range.end) fields.push({ field: 'profile.availability', message: '起日不得晚于止日' });
-  }
-  if (fields.length > 0) {
-    return { ok: false, error: sharingError('PROFILE_INVALID', '成员资料不合法', { fields }) };
-  }
-  return {
-    ok: true,
-    value: {
-      name,
-      originCity: profile.originCity === null ? null : profile.originCity.trim(),
-      budgetCap: profile.budgetCap,
-      availability: normalizeRanges(profile.availability),
-      preferences: [...new Set(profile.preferences.map((tag) => tag.trim()))],
-    },
-  };
-}
-
-export function profileChangedFixture(member: Member, profile: NormalizedMemberProfile): boolean {
-  const sameRanges =
-    member.availability.length === profile.availability.length &&
-    member.availability.every(
-      (range, index) =>
-        range.start === profile.availability[index]!.start && range.end === profile.availability[index]!.end,
-    );
-  return (
-    member.name !== profile.name ||
-    member.originCity !== profile.originCity ||
-    member.budgetCap !== profile.budgetCap ||
-    !sameRanges ||
-    member.preferences.join('\u0000') !== profile.preferences.join('\u0000')
-  );
-}
-
-/** T02 辅助函数替身：更新资料、constraintRevision+1；旧意向按版本绑定自动失效。 */
-export function applyProfileChangeFixture(trip: Trip, memberId: string, profile: NormalizedMemberProfile): Trip {
-  return {
-    ...trip,
-    constraintRevision: trip.constraintRevision + 1,
-    members: trip.members.map((member) =>
-      member.id === memberId
-        ? {
-            ...member,
-            name: profile.name,
-            originCity: profile.originCity,
-            budgetCap: profile.budgetCap,
-            availability: profile.availability.map((range) => ({ ...range })),
-            preferences: [...profile.preferences],
-          }
-        : member,
-    ),
-  };
-}
-
-export function confirmationStatusFixture(trip: Trip): 'preparing' | 'confirmed' | 'stale' {
-  const confirmation = trip.confirmation;
-  if (!confirmation) return 'preparing';
-  const plan = trip.plans.find((item) => item.id === confirmation.planId);
-  if (!plan || plan.version !== confirmation.planVersion) return 'stale';
-  if (confirmation.constraintRevision !== trip.constraintRevision) return 'stale';
-  const currentValues = trip.members.map((member) =>
-    trip.intents.find(
-      (intent) =>
-        intent.memberId === member.id &&
-        intent.planId === confirmation.planId &&
-        intent.planVersion === confirmation.planVersion &&
-        intent.constraintRevision === trip.constraintRevision,
-    )?.value,
-  );
-  if (currentValues.some((value) => value !== 'approve' && value !== 'acceptable')) return 'stale';
-  return 'confirmed';
-}
-
-export const fixtureDeps: SharingDeps = {
-  destinationInfo: (destinationId) => DESTINATIONS[destinationId] ?? null,
-  confirmationStatus: confirmationStatusFixture,
-  validateProfile: validateProfileFixture,
-  profileChanged: profileChangedFixture,
-  applyProfileChange: applyProfileChangeFixture,
+const TEMPLATES: Record<string, DestinationTemplate> = {
+  dest_qingdao: {
+    id: 'dest_qingdao',
+    version: 1,
+    name: '青岛',
+    tags: ['海边', '城市'],
+    supportedDays: [2, 3, 4, 5],
+    estimate: { lodgingPerNight: 200_00, foodPerDay: 120_00, activities: 90_00, reserve: 50_00 },
+    activities: [],
+    assetId: 'asset_qingdao',
+  },
+  dest_suzhou: {
+    id: 'dest_suzhou',
+    version: 1,
+    name: '苏州',
+    tags: ['人文', '自然'],
+    supportedDays: [2, 3],
+    estimate: { lodgingPerNight: 180_00, foodPerDay: 100_00, activities: 60_00, reserve: 40_00 },
+    activities: [],
+    assetId: 'asset_suzhou',
+  },
 };
+
+function memberEquals(current: Member, next: Pick<Member, 'name' | 'originCity' | 'budgetCap' | 'availability' | 'preferences'>): boolean {
+  const merged = mergeRanges(next.availability.map((range) => ({ ...range })));
+  const currentMerged = mergeRanges(current.availability.map((range) => ({ ...range })));
+  const sameRanges =
+    currentMerged.length === merged.length &&
+    currentMerged.every((range, index) => range.start === merged[index]?.start && range.end === merged[index]?.end);
+  return (
+    current.name.trim() === next.name.trim() &&
+    current.originCity === (next.originCity ?? null) &&
+    current.budgetCap === next.budgetCap &&
+    sameRanges &&
+    [...new Set(current.preferences.map((t) => t.trim()))].join('\u0000') ===
+      [...new Set(next.preferences.map((t) => t.trim()))].join('\u0000')
+  );
+}
+
+/** T02 辅助函数替身：校验资料；相同值不增加版本（BR-02），变化则 constraintRevision+1。 */
+export const fixturePlanning: PlanningService = {
+  getPlanEvaluations: () => [],
+  getConsensusStatus: (trip: Trip, planId: string) => {
+    const confirmation = trip.confirmation;
+    if (!confirmation || confirmation.planId !== planId) {
+      return { canConfirm: false, confirmed: false, reasons: ['尚未确认该方案'] };
+    }
+    const plan = trip.plans.find((item) => item.id === planId);
+    if (!plan || plan.version !== confirmation.planVersion || confirmation.constraintRevision !== trip.constraintRevision) {
+      return { canConfirm: false, confirmed: false, reasons: ['确认已失效，需重新确认'] };
+    }
+    const missing = trip.members
+      .map((member) =>
+        trip.intents.find(
+          (intent) =>
+            intent.memberId === member.id &&
+            intent.planId === planId &&
+            intent.planVersion === plan.version &&
+            intent.constraintRevision === trip.constraintRevision,
+        )?.value,
+      )
+      .filter((value) => value !== 'approve' && value !== 'acceptable');
+    if (missing.length > 0) {
+      return { canConfirm: false, confirmed: false, reasons: ['存在未赞成或未反馈的成员'] };
+    }
+    return { canConfirm: true, confirmed: true, reasons: [] };
+  },
+  findCommonDepartures: () => [],
+  updateMemberConstraints: (trip: Trip, memberId: string, changes: Partial<Omit<Member, 'id'>>) => {
+    const member = trip.members.find((item) => item.id === memberId);
+    if (!member) return failure('NOT_FOUND', '成员不存在');
+    const name = (changes.name ?? member.name).trim();
+    if (name.length < 1 || name.length > 20) {
+      return failure('VALIDATION', '成员资料不合法', { 'member.name': '昵称需为 1～20 字' });
+    }
+    if (changes.budgetCap !== undefined && changes.budgetCap !== null && (changes.budgetCap < 0 || changes.budgetCap > 10_000_000)) {
+      return failure('VALIDATION', '成员资料不合法', { 'member.budgetCap': '预算需为 0～¥100,000' });
+    }
+    if (changes.availability !== undefined && changes.availability.length > 5) {
+      return failure('VALIDATION', '成员资料不合法', { 'member.availability': '最多 5 段可用日期' });
+    }
+    const nextMember: Member = {
+      ...member,
+      ...(changes.name !== undefined ? { name } : {}),
+      ...(changes.originCity !== undefined ? { originCity: changes.originCity } : {}),
+      ...(changes.budgetCap !== undefined ? { budgetCap: changes.budgetCap } : {}),
+      ...(changes.availability !== undefined
+        ? { availability: mergeRanges(changes.availability.map((range) => ({ ...range }))) }
+        : {}),
+      ...(changes.preferences !== undefined ? { preferences: [...changes.preferences] } : {}),
+    };
+    if (memberEquals(member, nextMember)) return success(trip);
+    return success({
+      ...trip,
+      constraintRevision: trip.constraintRevision + 1,
+      members: trip.members.map((item) => (item.id === memberId ? nextMember : item)),
+      // 旧意向保留为历史（版本绑定使其自动失效），不复制为当前版本。
+    });
+  },
+  evaluatePersonalPlan: () => ({ memberId: 'fixture', total: null, timeFits: null, budgetFits: null, reasons: [] }),
+  getTemplate: (destinationId: string, version: number) => {
+    const template = TEMPLATES[destinationId];
+    if (!template || template.version !== version) return failure('NOT_FOUND', '未知模板版本');
+    return success(template);
+  },
+};
+
+export { TEMPLATES as FIXTURE_TEMPLATES };
 
 // ---------------------------------------------------------------------------
 // Trip 工厂
@@ -259,7 +252,7 @@ export function makeInvitation(overrides: Partial<InvitationRecord> = {}): Invit
     id: 'inv_1',
     memberId: 'm_zhou',
     constraintRevision: 2,
-    planVersions: { p_qingdao: 1 },
+    planVersions: { p_qingdao: 1, p_suzhou: 1 },
     createdAt: NOW,
     ...overrides,
   };
@@ -278,7 +271,7 @@ export interface TripOverrides {
   constraintRevision?: number;
 }
 
-/** 基准旅行：3 名成员、青岛/苏州两个候选、已登记邀请，默认未确认。 */
+/** 基准旅行：3 名成员、青岛/苏州两个候选、目标成员 m_zhou 已登记邀请 inv_1。 */
 export function makeTrip(overrides: TripOverrides = {}): Trip {
   const plan = makePlan();
   const plan2 = makePlan({
@@ -335,7 +328,7 @@ export function makeTrip(overrides: TripOverrides = {}): Trip {
     },
     expenses: overrides.expenses ?? [],
     settlements: overrides.settlements ?? [],
-    invitations: overrides.invitations ?? [],
+    invitations: overrides.invitations ?? [makeInvitation()],
     appliedResponses: overrides.appliedResponses ?? [],
     appliedCommandIds: [],
     isDemo: false,
@@ -364,15 +357,9 @@ export function makeConfirmedTrip(): Trip {
   };
 }
 
-export function makeInvitationEnvelopeFromTrip(trip: Trip, memberId: string, payloadId = 'inv_1') {
-  const planVersions: Record<string, number> = {};
-  for (const plan of trip.plans) planVersions[plan.id] = plan.version;
-  const invitation: InvitationRecord = {
-    id: payloadId,
-    memberId,
-    constraintRevision: trip.constraintRevision,
-    planVersions,
-    createdAt: NOW,
-  };
-  return { trip: { ...trip, invitations: [...trip.invitations, invitation] }, invitation };
+export function makeCommand(commandId: string, payload: Command['payload'], trip: Trip): Command {
+  return { commandId, tripId: trip.id, expectedRevision: trip.revision, payload };
 }
+
+export { addDays };
+export type { Range };
