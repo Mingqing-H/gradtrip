@@ -6,7 +6,7 @@
  * 保持再导出。幂等、expectedRevision、revision 递增与事务由 T01 仓库执行。
  */
 import type { Trip } from '../types';
-import { isValidDateOnly } from '../dates';
+import { isDateOnly as isValidDateOnly } from '../dates';
 import {
   MAX_ACTIVITIES,
   MAX_EXPENSES,

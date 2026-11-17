@@ -8,7 +8,7 @@
  * 命令类型带判别字段 type；commandId 用于结算记录实体的去重登记。
  */
 import type { Expense, Settlement, Trip } from '../types';
-import { isValidDateOnly } from '../dates';
+import { isDateOnly as isValidDateOnly } from '../dates';
 import {
   MAX_EXPENSES,
   MAX_EXPENSE_CENTS,

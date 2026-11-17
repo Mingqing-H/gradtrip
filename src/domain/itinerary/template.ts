@@ -6,7 +6,7 @@
  * 不读取旅行现状、不生成随机数，首次生成与替换均由调用方决定如何落库。
  */
 import type { Activity, Trip } from '../types';
-import { addDays, isValidDateOnly } from '../dates';
+import { addDays, isDateOnly as isValidDateOnly } from '../dates';
 import { domainError, type DomainError } from '../ledger/errors';
 import { validateActivityTime } from './activity';
 

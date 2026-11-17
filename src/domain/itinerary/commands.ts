@@ -7,7 +7,7 @@
  * 重新确认默认保留日程，替换必须经 previewTemplateReplacement 展示影响后显式执行。
  */
 import type { Activity, Trip } from '../types';
-import { addDays, isValidDateOnly } from '../dates';
+import { addDays, isDateOnly as isValidDateOnly } from '../dates';
 import {
   MAX_ACTIVITIES,
   NOTE_MAX_LENGTH,

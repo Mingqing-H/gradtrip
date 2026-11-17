@@ -7,7 +7,7 @@
  * 不伪造“全部付款成功”。若示例成员 ID 改变，引用由注入参数重算，不遗留失效引用。
  */
 import type { Activity, Expense, Settlement } from '../domain/types';
-import { addDays, diffDays } from '../domain/dates';
+import { addDays, daysBetween as diffDays } from '../domain/dates';
 import { splitEqualCents } from '../domain/ledger/split';
 import { computeMemberBalances } from '../domain/ledger/balances';
 import { buildSettlementSuggestions } from '../domain/ledger/settlement';
