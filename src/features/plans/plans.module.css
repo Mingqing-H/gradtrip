@@ -1,0 +1,33 @@
+.plansPage { display: grid; gap: 20px; }
+.filters { display: flex; gap: 12px; align-items: end; flex-wrap: wrap; background: white; border: 1px solid var(--color-border); border-radius: 16px; padding: 16px; }
+.filters .field { margin: 0; min-width: 140px; }
+.filterActions { display: flex; gap: 8px; }
+.cards { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; }
+.planCard { background: white; border: 1px solid var(--color-border); border-radius: 16px; overflow: hidden; display: grid; }
+.cardImage { width: 100%; aspect-ratio: 16 / 9; object-fit: cover; background: #dfe7f1; display: block; }
+.cardBody { padding: 16px; display: grid; gap: 8px; }
+.cardTitle { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; }
+.cardTitle h2 { font-size: 20px; }
+.cardMeta { color: var(--color-muted); font-size: 14px; }
+.cardEstimate { font-size: 22px; font-weight: 700; }
+.metrics { display: flex; gap: 12px; flex-wrap: wrap; font-size: 14px; }
+.metricOk { color: #16704a; }
+.metricConflict { color: #b42318; }
+.metricUnknown { color: #925000; }
+.cardActions { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 4px; }
+.destNote { color: var(--color-muted); font-size: 13px; }
+.section { margin-top: 20px; }
+.estimateTable { width: 100%; border-collapse: collapse; font-size: 14px; }
+.estimateTable th, .estimateTable td { text-align: left; padding: 8px 10px; border-bottom: 1px solid var(--color-border); }
+.estimateTable td.num { text-align: right; font-variant-numeric: tabular-nums; }
+.memberFitRow { display: grid; grid-template-columns: minmax(90px, 1fr) auto auto auto; gap: 8px; align-items: center; padding: 10px 0; border-bottom: 1px solid var(--color-border); font-size: 14px; }
+.intentControls { display: flex; gap: 6px; flex-wrap: wrap; }
+.intentBtn { border: 1px solid var(--color-border); background: white; border-radius: 8px; min-height: 44px; padding: 8px 12px; }
+.intentBtn.active { border-color: var(--color-primary); background: var(--color-primary-soft); color: var(--color-primary); font-weight: 600; }
+.blockerList { list-style: disc; padding-left: 20px; color: var(--color-danger); font-size: 14px; }
+.confirmBar { display: flex; gap: 12px; align-items: center; flex-wrap: wrap; margin-top: 16px; padding-top: 16px; border-top: 1px solid var(--color-border); }
+.statusChip { display: inline-block; padding: 4px 10px; border-radius: 999px; font-size: 14px; font-weight: 600; background: #edf2ff; color: var(--color-primary); }
+.statusChip.confirmed { background: #e6f5ee; color: #16704a; }
+.statusChip.stale { background: #fff4df; color: #925000; }
+.detailImage { width: 100%; aspect-ratio: 16/9; object-fit: cover; border-radius: 12px; background: #dfe7f1; }
+@media (max-width: 1023px) { .cards { grid-template-columns: 1fr; } }

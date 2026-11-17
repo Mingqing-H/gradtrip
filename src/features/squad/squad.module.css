@@ -1,0 +1,35 @@
+.squadPage { display: grid; gap: 20px; }
+.summary { display: flex; align-items: center; gap: 16px; flex-wrap: wrap; color: var(--color-muted); font-size: 14px; }
+.summary .grow { flex: 1; }
+.memberTable { width: 100%; border-collapse: collapse; background: white; border: 1px solid var(--color-border); border-radius: 16px; overflow: hidden; }
+.memberTable th, .memberTable td { text-align: left; padding: 14px 16px; border-bottom: 1px solid var(--color-border); vertical-align: top; }
+.memberTable th { font-size: 14px; color: var(--color-muted); font-weight: 600; background: #fafbfc; }
+.memberTable tr:last-child td { border-bottom: 0; }
+.memberName { font-weight: 600; }
+.memberSub { color: var(--color-muted); font-size: 13px; }
+.badge { display: inline-block; padding: 2px 8px; border-radius: 999px; font-size: 13px; font-weight: 600; }
+.badgeComplete { background: #e6f5ee; color: #16704a; }
+.badgeIncomplete { background: #fff4df; color: #925000; }
+.rowActions { display: flex; gap: 4px; flex-wrap: wrap; }
+.linkButton { border: 0; background: transparent; color: var(--color-primary); font-weight: 600; padding: 8px 6px; min-height: 44px; }
+.linkButton.danger { color: var(--color-danger); }
+.cardList { display: none; gap: 12px; }
+.memberCard { background: white; border: 1px solid var(--color-border); border-radius: 16px; padding: 16px; display: grid; gap: 8px; }
+.memberCardHead { display: flex; justify-content: space-between; align-items: center; gap: 12px; }
+.memberCardFields { display: grid; grid-template-columns: 1fr 1fr; gap: 4px 12px; color: var(--color-muted); font-size: 14px; }
+.memberCardActions { display: flex; gap: 8px; flex-wrap: wrap; }
+.preferenceTags { display: flex; gap: 6px; flex-wrap: wrap; }
+.tagChip { border: 1px solid var(--color-border); background: white; border-radius: 999px; padding: 6px 12px; min-height: 44px; font-size: 14px; }
+.tagChip.selected { border-color: var(--color-primary); background: var(--color-primary-soft); color: var(--color-primary); font-weight: 600; }
+.rangeRow { display: grid; grid-template-columns: 1fr 1fr auto; gap: 8px; align-items: end; margin-bottom: 8px; }
+.formHint { color: var(--color-muted); font-size: 13px; }
+.blockedList { background: #fff7f6; border: 1px solid #f4bdb8; border-radius: 8px; padding: 12px 16px; color: var(--color-danger); font-size: 14px; }
+.form { display: grid; gap: 4px; }
+.fieldset { border: 1px solid var(--color-border); border-radius: 12px; padding: 16px; margin: 8px 0; }
+.fieldset legend { font-weight: 600; padding: 0 8px; }
+.rangeRow { align-items: end; }
+.memberSubRow { color: var(--color-muted); font-size: 13px; }
+@media (max-width: 767px) {
+  .memberTable { display: none; }
+  .cardList { display: grid; }
+}

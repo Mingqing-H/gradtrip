@@ -174,7 +174,7 @@ function toResult(result: { ok: true; trip: Trip } | { ok: false; error: { code:
 }
 
 /** 规划命令 handler（B0 签名）。 */
-export const applyPlanningCommand: CommandHandler = (trip, payload, context) => {
+export const applyPlanningCommand: CommandHandler = (trip, payload, context, dependencies) => {
   if (!isPlanningPayload(payload)) {
     return failure('VALIDATION', '不是规划域命令');
   }
@@ -207,7 +207,24 @@ export const applyPlanningCommand: CommandHandler = (trip, payload, context) => 
   }
   const internal = toInternalCommand(trip, payload);
   if (!internal) return failure('NOT_IMPLEMENTED', '该规划命令尚未实现');
-  return toResult(applyInternal(trip, internal, toInternalContext(context)));
+  const result = applyInternal(trip, internal, toInternalContext(context));
+  if (!result.ok) return toResult(result);
+  // 首次确认：若无日程且注入了 T03 模板日程构建器，则按其能力生成；
+  // 已有日程默认保留（itineraryMode='preserve'），替换由 T03 的 replaceFromTemplate 命令负责。
+  if (payload.type === 'plan.confirm') {
+    const hasItinerary = result.trip.itinerary.dateRange !== null || result.trip.itinerary.activities.length > 0;
+    const plan = result.trip.plans.find((p) => p.id === payload.planId);
+    if (!hasItinerary && plan && dependencies.buildTemplateItinerary) {
+      const templateResult = dependencies.planning.getTemplate(plan.destinationId, plan.templateVersion);
+      if (templateResult.ok) {
+        const built = dependencies.buildTemplateItinerary({ plan, template: templateResult.value, ids: context.ids });
+        if (!built.ok) return built;
+        return success({ ...result.trip, itinerary: built.value });
+      }
+      // 模板版本不受支持时保留确认但不生成日程，并如实提示（不伪造日程）。
+    }
+  }
+  return success(result.trip);
 };
 
 /** B0 校验器：返回 BusinessError[]（空数组表示通过）。 */
