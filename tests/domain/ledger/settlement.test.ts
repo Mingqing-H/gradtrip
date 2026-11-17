@@ -21,7 +21,7 @@ describe('buildSettlementSuggestions 转账建议（BR-12）', () => {
 
   it('全部建议按序记为结算后余额全为 0，不再产生建议', () => {
     const trip = makeCanonicalLedgerTrip();
-    let expenses = trip.expenses;
+    const expenses = trip.expenses;
     let settlements = trip.settlements;
     for (const suggestion of buildSettlementSuggestions(
       computeMemberBalances(trip.members.map((m) => m.id), expenses, settlements),

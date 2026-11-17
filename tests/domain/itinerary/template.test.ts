@@ -63,8 +63,30 @@ describe('buildTemplateItinerary 模板构建（PRD F03）', () => {
     const second = buildTemplateItinerary(args);
     expect(first.ok && second.ok).toBe(true);
     if (!first.ok || !second.ok) return;
-    expect(first.activities.map(({ id: _id, ...rest }) => rest)).toEqual(
-      second.activities.map(({ id: _id, ...rest }) => rest),
+    expect(
+      first.activities.map((activity) => ({
+        date: activity.date,
+        startTime: activity.startTime,
+        endTime: activity.endTime,
+        title: activity.title,
+        category: activity.category,
+        budgetBucket: activity.budgetBucket,
+        perPersonEstimate: activity.perPersonEstimate,
+        note: activity.note,
+        order: activity.order,
+      })),
+    ).toEqual(
+      second.activities.map((activity) => ({
+        date: activity.date,
+        startTime: activity.startTime,
+        endTime: activity.endTime,
+        title: activity.title,
+        category: activity.category,
+        budgetBucket: activity.budgetBucket,
+        perPersonEstimate: activity.perPersonEstimate,
+        note: activity.note,
+        order: activity.order,
+      })),
     );
   });
 

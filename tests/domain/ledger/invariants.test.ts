@@ -153,7 +153,7 @@ describe('固定种子不变量用例（开发文档 10.1）', () => {
     for (const seed of seeds.slice(0, 10)) {
       const scenario = generateScenario(seed);
       const members = scenario.memberIds.map((id) => makeMember(id));
-      let trip: Trip = makeTrip({ members, expenses: scenario.expenses });
+      const trip: Trip = makeTrip({ members, expenses: scenario.expenses });
       const suggestions = buildSettlementSuggestions(
         computeMemberBalances(trip.members.map((m) => m.id), trip.expenses, []),
       );
