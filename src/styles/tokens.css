@@ -1,0 +1,9 @@
+:root {
+  font-family: Manrope, system-ui, 'Microsoft YaHei', sans-serif;
+  color: #18212f; background: #f7f8fa; font-synthesis: none;
+  --color-bg: #f7f8fa; --color-surface: #fff; --color-text: #18212f; --color-muted: #586575;
+  --color-primary: #2457d6; --color-primary-soft: #edf2ff; --color-border: #e1e6ed;
+  --color-success: #16704a; --color-warning: #925000; --color-danger: #b42318;
+  --space-1: 4px; --space-2: 8px; --space-3: 12px; --space-4: 16px; --space-6: 24px; --space-8: 32px; --space-10: 40px; --space-12: 48px; --space-16: 64px;
+  --radius-control: 8px; --radius-card: 16px; --motion-curve: cubic-bezier(.22,1,.36,1);
+}
