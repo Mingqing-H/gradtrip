@@ -29,6 +29,7 @@
 | 编写或调整界面 | [docs/pages.md](./docs/pages.md) | 页面、布局、弹层、响应式与交互状态 |
 | 工程选型与模块划分 | [docs/architecture.md](./docs/architecture.md) | 技术栈、分层、数据流、图标与图片管线 |
 | 开发、测试、性能与发布 | [docs/MVP_DEVELOPMENT.md](./docs/MVP_DEVELOPMENT.md) | 开发阶段、数据结构、测试与部署门槛 |
+| 多智能体并行开发 | [docs/gitworktree.md](./docs/gitworktree.md) | 四任务分工、项目外工作树、公共契约、文件归属与集成顺序 |
 
 用户当前明确要求优先于既有设计。文档有冲突时按上述职责核对；涉及范围或业务结果的实质冲突应明确提出，不静默选择方便的实现。设计变化同步更新相关文档，本文件只保留稳定约束与索引。
 
