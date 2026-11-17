@@ -2,7 +2,7 @@
 
 纯静态的毕业旅行工作台：小队、方案、日程、账本。数据属于当前浏览器，协作使用静态快照、邀请反馈或备份文件。
 
-当前 T01 公共基础已实现；T02/T03/T04 最终模块尚未集成，不能视为完整 MVP。公共命令和页面契约见 [T01 报告](docs/tasks/reports/T01.md)，实际结果见 [验收记录](docs/ACCEPTANCE.md)。
+T01 已完成公共基础与 T02/T03/T04 的本地最终集成，包含可操作示例、方案共识、日程预算、分摊结算、隔离设备反馈与备份恢复。公共接口及提交见 [T01 报告](docs/tasks/reports/T01.md)，检查和性能证据见 [验收记录](docs/ACCEPTANCE.md)。尚未绑定远程仓库或发布公开站点。
 
 ## 本地开发
 
@@ -29,9 +29,11 @@ npm.cmd run preview
 
 默认地址 http://127.0.0.1:4173/gradtrip/ 。E2E 使用已安装的 Chrome；新环境先运行 `npx playwright install --with-deps chrome`。检查覆盖 375/768/1440 px 和真正的构建子路径。
 
-`npm run check:integration` 是完整产品发布门槛。它在缺少任何必需页面、领域处理器或完整示例时失败；当前未交付的模块使它按预期失败。普通 test:run 中专用的全模块验收用例会明确跳过，不计作通过。
+`npm run check:integration` 是完整产品发布门槛。它在缺少任何必需页面、领域处理器或完整示例时失败；当前完整集成已通过该检查。普通 test:run 中专用的全模块验收用例会明确跳过，不计作通过。
 
 `check:bundle-size` 同时计算外壳及各个功能页的静态依赖与首屏懒加载依赖，JS/CSS gzip 门槛为 200/40 KiB，所有图片单张不超过 150 KiB。它不能代替真实网络的 LCP/CLS 验收。
+
+性能复测先启动生产 preview，再在另一终端运行 `npm.cmd run benchmark:browser`；它使用 375 px、4 倍 CPU、1.6 Mbps/750 Kbps、150 ms 延迟与三个冷上下文。`npm.cmd run benchmark:domain` 验证固定 20 人/20 方案/200 费用的 20 次计算，包含冷轮。原始结果在忽略目录 `.cache/*-performance.json`；`PERFORMANCE_URL` 可指定实际发布地址做线上复测。独立浏览器测量期间避免同时执行其他 CPU 密集检查。
 
 运行时依赖许可文本保存在 public/THIRD_PARTY_NOTICES.txt。依赖更新后运行 `node scripts/generate-notices.mjs`，并核对 docs/assets/SOURCES.md。
 

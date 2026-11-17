@@ -10,7 +10,7 @@
 - 生成日期：2026-11-18
 - 风格约束：扁平现代编辑插画；16:9 构图；不含文字、水印、Logo、真人特写；明确要求“illustration, not photograph”
 - 后期处理：Pillow 10.3.0，居中偏上裁切为 16:9，LANCZOS 缩放为 480px / 960px 宽，WebP quality=82、method=6
-- 单图最大：约 122 KiB（chengdu-960.webp），全部低于 150 KiB
+- 单图最大：119.25 KiB / 122112 bytes（chengdu-960.webp），全部低于 150 KiB
 - 资源 ID 与运行时引用：`src/data/assetsPlanning.ts`；模板引用见 `src/data/templates/v1.ts`
 
 | assetId | 目的地 | 生成提示要点 | 交付文件 |
