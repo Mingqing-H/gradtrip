@@ -13,3 +13,10 @@
 - 原因：路径未转为绝对路径，且 PowerShell 部分错误默认不终止执行。
 - 处理：先 Resolve-Path，再取得父目录；校验脚本设置 `$ErrorActionPreference = 'Stop'`。Git 等外部命令仍需单独检查 `$LASTEXITCODE`。
 - 避免：只有全部检查正常完成才报告通过，不能只凭最后一个命令的退出码或 PASS 文本判断。
+
+## T01：PowerShell 与 npm 缓存权限
+
+- 现象：直接运行 npm 被 ExecutionPolicy 拦截；npm.cmd 又因默认缓存 D:\npm-cache 不可写而报 EPERM。
+- 原因：PowerShell 解析到了 npm.ps1，且缓存位于工作树可写范围外。
+- 处理：使用 npm.cmd；项目 .npmrc 将缓存设为 .npm-cache 并忽略该目录。
+- 避免：不修改系统执行策略、不提权安装依赖；Windows 中先核对 npm 入口与缓存路径。

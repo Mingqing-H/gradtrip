@@ -40,7 +40,7 @@ export interface PlanningService {
 export type TemplateItineraryBuilder = (input: {
   plan: Plan; template: DestinationTemplate; ids: readonly Id[];
 }) => Result<Trip['itinerary']>;
-export interface DomainDependencies { planning: PlanningService; buildTemplateItinerary: TemplateItineraryBuilder }
+export interface DomainDependencies { planning: PlanningService; buildTemplateItinerary: TemplateItineraryBuilder; createDemo?: (input: { id: Id; today: DateOnly; now: string }) => Result<Trip> }
 export type CommandHandler = (trip: Trip, payload: CommandPayload, context: CommandContext, dependencies: DomainDependencies) => Result<Trip>;
 export type TripValidator = (trip: Trip) => BusinessError[];
 export interface DomainModule { apply: CommandHandler; validate: TripValidator }
@@ -62,14 +62,14 @@ export interface Repository {
   setSettings(settings: RepositorySettings): Promise<Result<void>>;
   close(): void;
 }
-export type SharingPanel = { type: 'invite'; memberId: Id } | { type: 'share'; planId?: Id } | { type: 'import' } | { type: 'backup' } | { type: 'recovery' };
+export type SharingPanel = { type: 'invite'; memberId: Id } | { type: 'share'; planId?: Id } | { type: 'import'; data?: string } | { type: 'backup' } | { type: 'recovery' };
 export interface SharingApplicationDependencies {
   repository: Repository; planning: PlanningService;
   execute: (payload: CommandPayload) => Promise<Result<Trip>>;
   now: () => string; today: () => DateOnly; createId: () => Id; baseUrl: string;
 }
 export interface SharingPanelProps {
-  trip: Trip; panel: SharingPanel; onClose: () => void; repository: Repository;
+  trip: Trip | null; panel: SharingPanel; onClose: () => void; repository: Repository;
   services: SharingApplicationDependencies; onApplied: (trip: Trip) => void;
 }
 export interface ExternalPageProps {
