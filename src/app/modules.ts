@@ -1,3 +1,4 @@
+import { createDemoTrip } from './application/demo';
 import type { DomainDependencies, DomainModule, FeatureExports, PlanningService } from '../contracts/services';
 import { failure } from '../contracts/result';
 const features = import.meta.glob('../features/*/index.ts', { eager: true }) as Record<string, FeatureExports>;
@@ -22,4 +23,4 @@ const planning: PlanningService = {
   findCommonDepartures: () => { throw new Error('规划模块尚未接入'); },
   updateMemberConstraints: unavailable, evaluatePersonalPlan: () => { throw new Error('规划模块尚未接入'); }, getTemplate: unavailable,
 };
-export const dependencies: DomainDependencies = { planning: exports.planningService ?? planning, buildTemplateItinerary: exports.buildTemplateItinerary ?? (() => failure('NOT_IMPLEMENTED', '日程构建器尚未接入')) };
+export const dependencies: DomainDependencies = { createDemo: createDemoTrip, planning: exports.planningService ?? planning, buildTemplateItinerary: exports.buildTemplateItinerary ?? (() => failure('NOT_IMPLEMENTED', '日程构建器尚未接入')) };

@@ -10,7 +10,11 @@ export function applyCommand(trip: Trip, command: Command, context: CommandConte
   if (trip.appliedCommandIds.length >= 5000) return failure('CAPACITY', '命令历史已满，请导出备份');
   let next: Result<Trip>;
   if (command.payload.type === 'trip.rename') next = success({ ...trip, name: command.payload.name });
-  else if (command.payload.type === 'trip.resetDemo') next = failure('NOT_IMPLEMENTED', '示例种子尚未接入，不能重置');
+  else if (command.payload.type === 'trip.resetDemo') {
+    if (!trip.isDemo) return failure('VALIDATION', '只能重置示例旅行');
+    const demo = dependencies.createDemo?.({ id: trip.id, today: context.today, now: context.now });
+    next = demo?.ok ? success({ ...demo.value, constraintRevision: trip.constraintRevision + 1, createdAt: trip.createdAt }) : demo ?? failure('NOT_IMPLEMENTED', '示例种子尚未接入，不能重置');
+  }
   else {
     const prefix = command.payload.type.split('.')[0];
     const module = modules[prefix === 'member' || prefix === 'plan' ? 'planning' : prefix === 'sharing' ? 'sharing' : 'itineraryLedger'];

@@ -20,6 +20,7 @@ function Modal({ open, title, onClose, children, footer, drawer = false }: Dialo
     if (!open || !dialog) return;
     const previous = document.activeElement instanceof HTMLElement ? document.activeElement : null;
     if (!dialog.open) dialog.showModal();
+    dialog.querySelector<HTMLElement>('input:not([disabled]), select:not([disabled]), textarea:not([disabled])')?.focus();
     return () => { dialog.close(); previous?.focus(); };
   }, [open]);
   return <dialog ref={ref} className={drawer ? 'modal drawer' : 'modal'} aria-labelledby={titleId} onCancel={event => { event.preventDefault(); onClose(); }}>
