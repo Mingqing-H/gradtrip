@@ -65,7 +65,7 @@ export function SnapshotPage({ data, repository, services }: ExternalPageProps) 
     try {
       const draft = snapshotToNewTripDraft(
         { ...envelope, body } as Parameters<typeof snapshotToNewTripDraft>[0],
-        { newTripId: services.createId(), now: services.now(), idFactory: { nextId: (kind, oldId) => `${services.createId()}_${kind}_${oldId}` } },
+        { newTripId: services.createId(), now: services.now(), idFactory: { nextId: () => services.createId() } },
       );
       if (!draft.ok) { setError(draft.error.message); return; }
       const created = await repository.create(draft.value);

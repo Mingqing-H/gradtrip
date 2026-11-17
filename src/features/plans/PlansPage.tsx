@@ -179,7 +179,7 @@ export function PlansPage({ trip, execute, services, openShare }: WorkspaceProps
     <div className={styles.plansPage}>
       <div className="page-heading">
         <h1>方案 <span className={`${styles.statusChip} ${statusClass}`}>{statusText}</span></h1>
-        <Button variant="secondary" onClick={() => selectedPlan && openShare(selectedPlan.id)} disabled={!selectedPlan}>分享方案</Button>
+        <Button variant="secondary" onClick={() => openShare(trip.confirmation?.planId ?? trip.plans[0].id)} disabled={trip.plans.length === 0}>分享方案</Button>
       </div>
       <div className={styles.filters}>
         <Input label="窗口起日" type="date" value={windowStart} onChange={(e) => setWindowStart(e.target.value)} />

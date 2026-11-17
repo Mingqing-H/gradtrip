@@ -16,6 +16,7 @@ import {
 } from 'lucide-react';
 import { Button, Dialog, ErrorNotice, Input, Menu, Select } from '../../components/ui';
 import { formatMoney, parseMoney } from '../../domain/money';
+import { addDays } from '../../domain/dates';
 import {
   findOutOfRangeActivities,
   findTimeOverlaps,
@@ -74,6 +75,7 @@ export function ItineraryPage({ trip, execute, services }: WorkspaceProps) {
   const { activities, dateRange } = trip.itinerary;
   const [editing, setEditing] = useState<{ id: string | null } | null>(null);
   const [form, setForm] = useState<ActivityForm>(emptyForm(dateRange?.start ?? ''));
+  const [draftRange, setDraftRange] = useState({ start: trip.searchWindow.start, end: addDays(trip.searchWindow.start, trip.duration - 1) });
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [replacing, setReplacing] = useState(false);
@@ -159,7 +161,7 @@ export function ItineraryPage({ trip, execute, services }: WorkspaceProps) {
             type: 'itinerary.add',
             activity,
             ...(dateRange === null
-              ? { dateRange: { start: trip.searchWindow.start, end: trip.searchWindow.end } }
+              ? { dateRange: draftRange }
               : {}),
           });
       if (!result.ok) {
@@ -333,6 +335,10 @@ export function ItineraryPage({ trip, execute, services }: WorkspaceProps) {
         }
       >
         {error !== null && <ErrorNotice>{error}</ErrorNotice>}
+        {dateRange === null ? <div className={styles.formRow}>
+          <Input label="日程开始日期" type="date" value={draftRange.start} onChange={event => setDraftRange({ ...draftRange, start: event.target.value })}/>
+          <Input label="日程结束日期" type="date" value={draftRange.end} onChange={event => setDraftRange({ ...draftRange, end: event.target.value })}/>
+        </div> : null}
         <Input
           label="名称"
           value={form.title}
@@ -342,8 +348,8 @@ export function ItineraryPage({ trip, execute, services }: WorkspaceProps) {
           label="日期"
           type="date"
           value={form.date}
-          min={dateRange?.start ?? trip.searchWindow.start}
-          max={dateRange?.end ?? trip.searchWindow.end}
+          min={dateRange?.start ?? draftRange.start}
+          max={dateRange?.end ?? draftRange.end}
           onChange={(event) => setForm({ ...form, date: event.target.value })}
         />
         <div className={styles.formRow}>

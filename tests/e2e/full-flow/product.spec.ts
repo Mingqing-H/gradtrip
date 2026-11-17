@@ -146,3 +146,53 @@ test('isolated invitation response, duplicate preview, backup overwrite, recover
     expect(copied?.expenses).toHaveLength(3);
   } finally { await peerContext.close(); await receiverContext.close(); }
 });
+
+test('public snapshot stays read-only until copied, and excludes private members and expenses', async ({ page, browser }) => {
+  await demo(page);
+  await page.getByRole('link', { name: '方案', exact: true }).click();
+  await page.getByRole('button', { name: '分享方案', exact: true }).click();
+  await page.getByRole('button', { name: '生成分享链接', exact: true }).click();
+  const link = await page.getByLabel('分享链接', { exact: true }).inputValue();
+  const snapshot = decodeLink(link);
+  expect(snapshot.type).toBe('snapshot');
+  expect(JSON.stringify(snapshot)).not.toContain('林知夏');
+  expect(snapshot.body.expenses).toBeUndefined();
+  expect(snapshot.body.itinerary.activities.every((activity: Record<string, unknown>) => !('note' in activity))).toBe(true);
+  const context = await browser.newContext({ viewport: page.viewportSize()!, timezoneId: 'Asia/Shanghai' });
+  try {
+    const viewer = await context.newPage(); await viewer.goto(link);
+    await expect(viewer.getByText('只读快照', { exact: true })).toBeVisible();
+    expect(await readTrip(viewer)).toBeNull();
+    await viewer.reload();
+    await expect(viewer.getByText('只读快照', { exact: true })).toBeVisible();
+    await viewer.getByRole('button', { name: '另存为我的旅行', exact: true }).click();
+    await expect(viewer.getByRole('heading', { level: 1 })).toContainText('小队');
+    const copiedId = viewer.url().split('/trip/')[1].split('/')[0];
+    const copied = await readTrip(viewer, copiedId);
+    expect(copied?.members).toHaveLength(0);
+    expect(copied?.expenses).toHaveLength(0);
+    expect(copied?.intents).toHaveLength(0);
+    expect(copied?.confirmation).toBeNull();
+    expect(copied?.invitations).toHaveLength(0);
+    expect(copied?.itinerary.activities).toHaveLength(snapshot.body.itinerary.activities.length);
+    expect(copied?.itinerary.activities.every(activity => activity.id.length <= 120 && !activity.id.startsWith('demo-'))).toBe(true);
+  } finally { await context.close(); }
+});
+
+test('a draft itinerary uses the explicit date range selected in its first activity form', async ({ page }) => {
+  await demo(page); await openMenu(page, '创建旅行');
+  await page.getByLabel('旅行名称', { exact: true }).fill('草稿日期验收');
+  await page.getByRole('dialog').getByRole('button', { name: '创建旅行', exact: true }).click();
+  await expect(page.getByRole('heading', { level: 1 })).toContainText('小队');
+  const id = page.url().split('/trip/')[1].split('/')[0];
+  await page.getByRole('link', { name: '日程', exact: true }).click();
+  await page.getByRole('button', { name: '添加安排', exact: true }).first().click();
+  await page.getByLabel('日程开始日期', { exact: true }).fill('2026-12-18');
+  await page.getByLabel('日程结束日期', { exact: true }).fill('2026-12-20');
+  await page.getByLabel('名称', { exact: true }).fill('自行安排');
+  await page.getByLabel('日期', { exact: true }).fill('2026-12-18');
+  await page.getByRole('button', { name: '保存安排', exact: true }).click();
+  await expect(page.getByRole('dialog')).not.toBeVisible();
+  expect((await readTrip(page, id))?.itinerary.dateRange).toEqual({ start: '2026-12-18', end: '2026-12-20' });
+  await page.reload(); await expect(page.getByText('自行安排', { exact: true })).toBeVisible();
+});
