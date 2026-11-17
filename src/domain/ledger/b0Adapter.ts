@@ -190,12 +190,14 @@ export function applyB0ItineraryLedgerCommand(
       return failure('NOT_IMPLEMENTED', `此日程/账本命令尚未实现：${payload.type}`);
     }
   }
-  let domainContext: CommandContext;
   try {
-    domainContext = toDomainContext(context);
+    const result = applyItineraryLedgerCommand(trip, command, toDomainContext(context));
+    return result.ok ? success(result.trip) : { ok: false, error: toBusinessError(result.error) };
   } catch (error) {
-    return failure('VALIDATION', error instanceof Error ? error.message : '命令上下文无效');
+    // 预分配 ID 不足等领域前置条件由 allocateId 抛 RangeError；适配层转为结构化错误，不向外抛异常。
+    return failure(
+      'VALIDATION',
+      error instanceof Error ? error.message : '执行命令时发生无效输入',
+    );
   }
-  const result = applyItineraryLedgerCommand(trip, command, domainContext);
-  return result.ok ? success(result.trip) : { ok: false, error: toBusinessError(result.error) };
 }

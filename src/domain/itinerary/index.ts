@@ -41,17 +41,22 @@ export function buildTemplateItineraryForB0(input: {
     note: activity.note,
   }));
   let counter = 0;
-  const built: BuildTemplateResult = buildPure({
-    template: { destinationId: template.id, templateVersion: template.version, seeds },
-    startDate: plan.startDate,
-    days: plan.days,
-    allocateId: (prefix: string) => {
-      const id = ids[counter];
-      if (id === undefined) throw new RangeError(`预分配 ID 不足（${prefix}）`);
-      counter += 1;
-      return id;
-    },
-  });
+  let built: BuildTemplateResult;
+  try {
+    built = buildPure({
+      template: { destinationId: template.id, templateVersion: template.version, seeds },
+      startDate: plan.startDate,
+      days: plan.days,
+      allocateId: (prefix: string) => {
+        const id = ids[counter];
+        if (id === undefined) throw new RangeError(`预分配 ID 不足（${prefix}）`);
+        counter += 1;
+        return id;
+      },
+    });
+  } catch (error) {
+    return failure('VALIDATION', error instanceof Error ? error.message : '构建模板日程失败');
+  }
   if (!built.ok) {
     const first = built.errors[0];
     return failure('VALIDATION', first?.message ?? '模板日程无效', first?.field ? { [first.field]: first.message } : undefined);
