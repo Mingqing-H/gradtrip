@@ -20,3 +20,17 @@
 - 原因：PowerShell 解析到了 npm.ps1，且缓存位于工作树可写范围外。
 - 处理：使用 npm.cmd；项目 .npmrc 将缓存设为 .npm-cache 并忽略该目录。
 - 避免：不修改系统执行策略、不提权安装依赖；Windows 中先核对 npm 入口与缓存路径。
+
+## T03：B0 实际契约与文档约定不一致
+
+- 现象：按 gitworktree §4 文档桩写的领域代码，合并 B0 后 typecheck 报 `isValidDateOnly/diffDays` 不存在，且 CommandPayload、Result、CommandContext 形状全部不符。
+- 原因：B0 实际导出 `isDateOnly/daysBetween`；payload 是扁平实体而非 `{type,payload}` 包装；`Result` 用 `value` 而非 `trip`；ID 由 `context.ids` 预分配而非 `allocateId` 回调；`buildTemplateItinerary` 是注入式 builder。
+- 处理：领域内部保留纯函数签名与细粒度错误码；新增 `b0Adapter.ts`/`errorMapping.ts` 做形状与错误码转换；日期工具用别名导入；适配器统一捕获 allocateId 的 RangeError 转结构化 VALIDATION，不向应用层抛异常。
+- 避免：并行阶段可用文档桩提前写纯算法，但合并 B0 后必须以真实导出的 TS 类型为准做适配层校验，不能假定文档桩即最终签名。
+
+## T03：空金额经 parseMoney/formatMoney 抛 RangeError 触发错误边界
+
+- 现象：浏览器打开"记一笔"弹层即崩溃到"页面暂时无法显示"，控制台 `RangeError: 金额必须为安全整数分`。
+- 原因：金额输入框为空时 `parseMoney('')` 抛错得 NaN，`summarizeCustomAllocations` 累加得 NaN，`formatMoney(NaN)` 再抛；useMemo 内的 try/catch 只覆盖了 parseMoney 本身，没覆盖后续派生渲染。
+- 处理：金额无效（null/NaN/非安全整数）时不生成分配预览；自定义金额非法保留 NaN 仅用于提交校验，但预览前用 `Number.isSafeInteger` 拦截；确保传入 formatMoney 的都是安全整数。
+- 避免：B0 `formatMoney/assertCents` 对非法输入是抛错而非返回占位；任何由 UI 文本派生的金额，在传入格式化/求和前先判断 `Number.isSafeInteger`，不要依赖上游 try/catch。

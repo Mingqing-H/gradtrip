@@ -98,7 +98,9 @@ export function LedgerPage({ trip, execute, saveStatus }: WorkspaceProps) {
         let amount: number | null = null;
         if (text.trim() !== '') {
           try {
-            amount = parseMoney(text);
+            const parsed = parseMoney(text);
+            // 非法输入保留 NaN 供提交时提示，但不能进入求和导致 NaN 传播到 formatMoney。
+            amount = Number.isSafeInteger(parsed) ? parsed : Number.NaN;
           } catch {
             amount = Number.NaN;
           }
@@ -114,8 +116,18 @@ export function LedgerPage({ trip, execute, saveStatus }: WorkspaceProps) {
   }, [form, amountCents]);
 
   const allocationPreview = useMemo(() => {
-    if (form === null || amountCents === null || allocations === null) return null;
-    return summarizeCustomAllocations(amountCents, allocations);
+    if (
+      form === null ||
+      amountCents === null ||
+      !Number.isSafeInteger(amountCents) ||
+      allocations === null
+    ) {
+      return null;
+    }
+    const summary = summarizeCustomAllocations(amountCents, allocations);
+    // 自定义金额含非法输入（NaN）时不生成可渲染的预览，避免 NaN 进入金额格式化。
+    if (!Number.isSafeInteger(summary.filledTotal) || !Number.isSafeInteger(summary.difference)) return null;
+    return summary;
   }, [form, amountCents, allocations]);
 
   const openCreate = () => {
