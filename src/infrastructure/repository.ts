@@ -2,7 +2,7 @@ import { z } from 'zod';
 import type { IDBPDatabase } from 'idb';
 import type { Trip } from '../domain/types';
 import type { Command, CommandContext } from '../domain/commands';
-import { idSchema, parseTrip, MAX_STORAGE_BYTES } from '../domain/schema';
+import { idSchema, parseTrip, MAX_STORAGE_BYTES, MAX_TRIP_BYTES } from '../domain/schema';
 import { failure, success, type Result } from '../contracts/result';
 import type { DomainDependencies, DomainModule, RecoveryRecord, Repository, RepositorySettings, TripRecord } from '../contracts/services';
 import { applyCommand } from '../app/application/commands';
@@ -22,6 +22,7 @@ const settingsSchema = z.strictObject({
 function decode(record: StoredTrip | undefined): Result<Trip> {
   if (!record) return failure('NOT_FOUND', '找不到此旅行，请选择其他旅行或导入备份');
   try {
+    if (typeof record.raw !== 'string' || new TextEncoder().encode(record.raw).length > MAX_TRIP_BYTES) return failure('CORRUPT', '本地旅行原始内容超过大小上限，内容已保留');
     const parsed = parseTrip(JSON.parse(record.raw));
     if (!parsed.ok) return failure('CORRUPT', '本地旅行数据损坏，原始内容已保留，可先导出再恢复', parsed.error.fields);
     if (parsed.value.id !== record.id || parsed.value.revision !== record.revision) return failure('CORRUPT', '旅行索引与内容不一致，原始内容已保留');
@@ -165,6 +166,7 @@ export function createTemporaryRepository(options: RepositoryOptions): Repositor
   // volatile port implements the same application contract and always advertises memory mode.
   const trips = new Map<string, Trip>(); const recoveries = new Map<string, RecoveryRecord>();
   let settings: RepositorySettings = { initialized: false };
+  const withinCapacity = (candidate: Trip, copies: RecoveryRecord[] = [...recoveries.values()]) => bytes([...trips.values()].filter(t => t.id !== candidate.id).map(stored).concat(stored(candidate))) + bytes(copies) <= (options.maxStorageBytes ?? MAX_STORAGE_BYTES);
   const validateMemory = (trip: Trip) => validate(structuredClone(trip), options);
   return {
     mode: 'memory',
@@ -175,12 +177,16 @@ export function createTemporaryRepository(options: RepositoryOptions): Repositor
       const checked = validateMemory(trip); if (!checked.ok) return checked;
       if (trips.has(trip.id)) return failure('CONFLICT', '旅行已存在');
       if (trips.size >= 10) return failure('CAPACITY', '最多保存 10 个旅行');
+      if (!withinCapacity(checked.value)) return failure('CAPACITY', '临时内容超过存储上限，请导出并精简');
       trips.set(trip.id, structuredClone(checked.value)); return checked;
     },
     execute: async (command, context) => {
       const trip = trips.get(command.tripId); if (!trip) return failure('NOT_FOUND', '找不到旅行');
       const result = applyCommand(trip, command, context, options.modules, options.dependencies);
-      if (result.ok) trips.set(trip.id, structuredClone(result.value)); return result;
+      if (result.ok) {
+        if (!withinCapacity(result.value)) return failure('CAPACITY', '临时内容超过存储上限');
+        trips.set(trip.id, structuredClone(result.value));
+      } return result;
     },
     delete: async (id, revision) => {
       const trip = trips.get(id); if (!trip) return failure('NOT_FOUND', '找不到旅行');
@@ -192,8 +198,12 @@ export function createTemporaryRepository(options: RepositoryOptions): Repositor
       if (old.revision !== expectedRevision) return failure('CONFLICT', '旅行已更新');
       if (recoveries.has(recoveryId)) return failure('CONFLICT', '恢复副本 ID 已存在');
       const next = validateMemory({ ...trip, revision: old.revision + 1, updatedAt: now, appliedCommandIds: [...new Set([...old.appliedCommandIds, ...trip.appliedCommandIds])] }); if (!next.ok) return next;
-      recoveries.set(recoveryId, { id: recoveryId, tripId: trip.id, raw: JSON.stringify(old), createdAt: now });
-      const sameTrip = [...recoveries.values()].filter(r => r.tripId === trip.id).sort((a, b) => b.createdAt.localeCompare(a.createdAt) || b.id.localeCompare(a.id));
+      if (!idSchema.safeParse(recoveryId).success) return failure('VALIDATION', '恢复副本标识无效');
+      const recovery = { id: recoveryId, tripId: trip.id, raw: JSON.stringify(old), createdAt: now };
+      const sameTrip = [...recoveries.values()].filter(r => r.tripId === trip.id).concat(recovery).sort((a, b) => b.createdAt.localeCompare(a.createdAt) || b.id.localeCompare(a.id));
+      const remaining = [...recoveries.values()].filter(r => r.tripId !== trip.id).concat(sameTrip.slice(0, 3));
+      if (!withinCapacity(next.value, remaining)) return failure('CAPACITY', '恢复副本将超过临时存储上限');
+      recoveries.set(recoveryId, recovery);
       sameTrip.slice(3).forEach(r => recoveries.delete(r.id));
       trips.set(trip.id, structuredClone(next.value)); return next;
     },
@@ -205,11 +215,17 @@ export function createTemporaryRepository(options: RepositoryOptions): Repositor
   };
 }
 export async function openRepository(base: string, options: RepositoryOptions, onUnavailable?: (message: string) => void): Promise<Repository> {
+  let abandoned = false;
+  let timer: ReturnType<typeof setTimeout> | undefined;
   try {
-    const db = await openTripDatabase(base, { blocked: () => onUnavailable?.('另一个旧页面阻止升级，请关闭旧页面后重试'), terminated: () => onUnavailable?.('存储连接已关闭，请导出当前内容后重新载入') });
+    const opening = openTripDatabase(base, { blocked: () => onUnavailable?.('另一个旧页面阻止升级，请关闭旧页面后重试'), terminated: () => onUnavailable?.('存储连接已关闭，请导出当前内容后重新载入') });
+    void opening.then(db => { if (abandoned) db.close(); }).catch(() => {});
+    const timeout = new Promise<never>((_, reject) => { timer = setTimeout(() => reject(new Error('存储连接等待超时')), 5000); });
+    const db = await Promise.race([opening, timeout]);
     return createIndexedDBRepository(db, options);
   } catch {
+    abandoned = true;
     onUnavailable?.('此浏览器无法使用本地存储。临时体验内容刷新后会丢失，请及时导出。');
     return createTemporaryRepository(options);
-  }
+  } finally { if (timer) clearTimeout(timer); }
 }

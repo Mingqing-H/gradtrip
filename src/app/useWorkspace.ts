@@ -140,6 +140,12 @@ export function useWorkspace(runtime: Runtime, tripId: string | undefined, works
     records, trip, loading: loading || bootLoading, error, setError, saveStatus, settings, settingsWarning, reloadKey,
     execute, create, remove, refreshList,
     retry: () => pending.current ? persist(pending.current.command, pending.current.context) : Promise.resolve(failure('NOT_FOUND', '没有待保存的内容')),
-    reload: () => { pending.current = null; setReloadKey(n => n + 1); },
+    reload: async () => {
+      if (tripRef.current && repository.mode === 'persistent') {
+        const result = await repository.get(tripRef.current.id);
+        if (!result.ok && result.error.code === 'STORAGE') { location.reload(); return; }
+      }
+      pending.current = null; setReloadKey(n => n + 1);
+    },
   };
 }

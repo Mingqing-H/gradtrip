@@ -4,6 +4,7 @@ export function assertCents(value: number, signed = false): number {
 }
 export function parseMoney(text: string): number {
   const clean = text.trim();
+  if (clean.length > 32) throw new RangeError('金额输入过长');
   if (!/^\d+(\.\d{1,2})?$/.test(clean)) throw new RangeError('请输入非负金额，最多两位小数');
   const [whole, decimal = ''] = clean.split('.');
   const cents = BigInt(whole) * 100n + BigInt(decimal.padEnd(2, '0'));

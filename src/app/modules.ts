@@ -1,8 +1,26 @@
+import { lazy, type ComponentType } from 'react';
 import { createDemoTrip } from './application/demo';
 import type { DomainDependencies, DomainModule, FeatureExports, PlanningService } from '../contracts/services';
 import { failure } from '../contracts/result';
-const features = import.meta.glob('../features/*/index.ts', { eager: true }) as Record<string, FeatureExports>;
-export const featureExports: FeatureExports = Object.assign({}, ...Object.values(features));
+const featureLoaders = import.meta.glob('../features/*/index.ts') as Record<string, () => Promise<FeatureExports>>;
+function feature<K extends keyof FeatureExports>(path: string, name: K): FeatureExports[K] {
+  const load = featureLoaders['../features/' + path + '/index.ts'];
+  if (!load) return undefined;
+  return lazy(async () => {
+    const module = await load(); const Page = module[name];
+    if (!Page) throw new Error('功能入口缺失：' + name);
+    return { default: Page as ComponentType<object> };
+  }) as FeatureExports[K];
+}
+export const featureExports: FeatureExports = {
+  SquadPage: feature('squad', 'SquadPage'), PlansPage: feature('plans', 'PlansPage'),
+  ItineraryPage: feature('itinerary', 'ItineraryPage'), LedgerPage: feature('ledger', 'LedgerPage'),
+  SnapshotPage: feature('sharing', 'SnapshotPage'), JoinPage: feature('sharing', 'JoinPage'),
+  ResponsePage: feature('sharing', 'ResponsePage'), SharingPanels: feature('sharing', 'SharingPanels'),
+};
+export async function loadFeatureExports(): Promise<FeatureExports> {
+  return Object.assign({}, ...await Promise.all(Object.values(featureLoaders).map(load => load())));
+}
 interface DomainExports {
   applyPlanningCommand?: DomainModule['apply']; validatePlanningTrip?: DomainModule['validate'];
   applyItineraryLedgerCommand?: DomainModule['apply']; validateItineraryLedgerTrip?: DomainModule['validate'];

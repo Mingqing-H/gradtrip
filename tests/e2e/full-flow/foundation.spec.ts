@@ -4,7 +4,7 @@ async function createTrip(page: Page, name = '自动验收旅行') {
   await page.getByRole('button', { name: '创建旅行', exact: true }).first().click();
   await page.getByLabel('旅行名称', { exact: true }).fill(name);
   await page.getByRole('dialog').getByRole('button', { name: '创建旅行', exact: true }).click();
-  await expect(page.getByRole('status')).toContainText('已保存到此设备');
+  await expect(page.getByRole('status', { name: '保存状态' })).toContainText('已保存到此设备');
 }
 async function menu(page: Page, name: string) {
   await page.locator('summary').click(); await page.getByRole('button', { name, exact: true }).click();
@@ -45,7 +45,7 @@ test('no horizontal overflow and meaningful navigation at target viewport', asyn
 test('a stale tab keeps a form draft and cannot overwrite the updated trip', async ({ page, context }) => {
   await createTrip(page);
   const second = await context.newPage(); await second.goto(page.url());
-  await expect(second.getByRole('status')).toContainText('已保存到此设备');
+  await expect(second.getByRole('status', { name: '保存状态' })).toContainText('已保存到此设备');
   await menu(second, '重命名'); await second.getByLabel('旅行名称').fill('旧标签草稿');
   await menu(page, '重命名'); await page.getByLabel('旅行名称').fill('先保存的版本'); await page.getByRole('button', { name: '保存名称' }).click();
   await expect(second.getByLabel('旅行名称')).toHaveValue('旧标签草稿');
@@ -68,10 +68,10 @@ test('quota failure keeps the current draft and retries the same command once', 
   await expect(page.getByRole('dialog')).toContainText('存储空间不足');
   await expect(page.getByLabel('旅行名称')).toHaveValue('需要重试的草稿');
   await page.getByRole('dialog').getByRole('button', { name: '关闭' }).click();
-  await expect(page.getByRole('status')).toContainText('尚未保存');
+  await expect(page.getByRole('status', { name: '保存状态' })).toContainText('尚未保存');
   await page.evaluate(() => { IDBObjectStore.prototype.put = (window as unknown as { originalPut: typeof IDBObjectStore.prototype.put }).originalPut; });
   await page.getByRole('button', { name: '重试保存' }).click();
-  await expect(page.getByRole('status')).toContainText('已保存到此设备');
+  await expect(page.getByRole('status', { name: '保存状态' })).toContainText('已保存到此设备');
   await page.reload(); await expect(page.getByRole('combobox')).toContainText('需要重试的草稿');
 });
 test('unknown routes and trip IDs preserve existing content', async ({ page }) => {
@@ -89,8 +89,22 @@ test('unavailable IndexedDB enables explicit temporary mode with export', async 
   await page.getByRole('button', { name: '创建旅行', exact: true }).first().click();
   await page.getByLabel('旅行名称').fill('临时旅行');
   await page.getByRole('dialog').getByRole('button', { name: '创建旅行', exact: true }).click();
-  await expect(page.getByRole('status').filter({ hasText: '临时体验 · 刷新后丢失' })).toBeVisible();
+  await expect(page.getByRole('status', { name: '保存状态' }).filter({ hasText: '临时体验 · 刷新后丢失' })).toBeVisible();
   const download = page.waitForEvent('download');
   await page.getByRole('button', { name: '导出当前内容', exact: true }).click();
   expect((await download).suggestedFilename()).toMatch(/^tonglu-raw-/);
+});
+
+test('Escape protects a dirty name and returns focus when continuing edit', async ({ page }) => {
+  await createTrip(page);
+  await menu(page, '重命名');
+  await expect(page.getByLabel('旅行名称')).toBeFocused();
+  await page.getByLabel('旅行名称').fill('尚未保存的名字');
+  await page.getByRole('dialog').press('Escape');
+  await expect(page.getByRole('dialog', { name: '放弃未保存的名称？' })).toBeVisible();
+  await page.getByRole('button', { name: '继续编辑' }).click();
+  await expect(page.getByLabel('旅行名称')).toHaveValue('尚未保存的名字');
+  await expect(page.getByLabel('旅行名称')).toBeFocused();
+  await page.getByRole('button', { name: '保存名称' }).click();
+  await expect(page.getByRole('combobox')).toContainText('尚未保存的名字');
 });

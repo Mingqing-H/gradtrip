@@ -31,3 +31,7 @@ export function mergeRanges(ranges: Range[]): Range[] {
   }
   return result;
 }
+
+// Compatibility names used by the itinerary/ledger public entry points.
+export const isValidDateOnly = isDateOnly;
+export const diffDays = daysBetween;
