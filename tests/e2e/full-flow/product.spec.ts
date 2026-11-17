@@ -1,0 +1,148 @@
+import { test, expect, type Page } from '@playwright/test';
+import { readFile } from 'node:fs/promises';
+import type { Trip } from '../../../src/domain/types';
+async function openMenu(page: Page, label: string) { await page.locator('summary').click(); await page.getByRole('button', { name: label, exact: true }).click(); }
+async function readTrip(page: Page, id = 'demo-trip'): Promise<Trip | null> {
+  return page.evaluate(id => new Promise<Trip | null>((resolve, reject) => {
+    const request = indexedDB.open('tonglu-gradtrip:' + encodeURIComponent(location.pathname));
+    request.onerror = () => reject(request.error);
+    request.onsuccess = () => {
+      const db = request.result;
+      const get = db.transaction('trips').objectStore('trips').get(id);
+      get.onerror = () => { db.close(); reject(get.error); };
+      get.onsuccess = () => { const raw = get.result as { raw: string } | undefined; db.close(); resolve(raw ? JSON.parse(raw.raw) as Trip : null); };
+    };
+  }), id);
+}
+function decodeLink(url: string) { const encoded = new URLSearchParams(new URL(url).hash.split('?')[1]).get('data')!; return JSON.parse(Buffer.from(encoded, 'base64url').toString('utf8')); }
+async function demo(page: Page) { await page.goto('./'); await expect(page.getByRole('heading', { level: 1 })).toContainText('小队'); await expect(page.getByRole('button', { name: '邀请 周予安 填写', exact: true })).toBeVisible(); }
+
+test('demo consensus, itinerary budget, partial expense allocation and settlement correction', async ({ page }) => {
+  const errors: string[] = []; page.on('pageerror', error => errors.push(error.message));
+  await demo(page);
+  await page.getByRole('link', { name: '方案', exact: true }).click();
+  const card = page.getByRole('article').filter({ has: page.getByRole('heading', { name: '青岛', exact: true }) }).filter({ hasText: '时间 6/6' });
+  await card.getByRole('button', { name: '查看方案' }).click();
+  const dialog = page.getByRole('dialog');
+  const member = dialog.getByRole('group', { name: '周予安方案适配' });
+  await member.getByRole('button', { name: '代录意向', exact: true }).click();
+  await member.getByRole('button', { name: '赞成', exact: true }).click();
+  await expect(dialog.getByRole('button', { name: '确认此方案' })).toBeEnabled();
+  await dialog.getByRole('button', { name: '确认此方案' }).click();
+  await expect(page.getByRole('heading', { level: 1 })).toContainText('已确认');
+  await dialog.getByRole('button', { name: '关闭', exact: true }).first().click();
+  await page.getByRole('link', { name: '日程', exact: true }).click();
+  await page.getByRole('button', { name: '添加安排', exact: true }).first().click();
+  await page.getByLabel('名称', { exact: true }).fill('手工安排保留');
+  await page.getByLabel('人均预计活动支出（元，留空表示待估算）').fill('500');
+  await page.getByRole('button', { name: '保存安排', exact: true }).click();
+  await expect(page.getByText('手工安排保留', { exact: true })).toBeVisible();
+  await expect(page.getByText(/日程调整后超出成员预算/)).toBeVisible();
+  await page.getByRole('link', { name: '账本', exact: true }).click();
+  await expect(page.getByText('实际支出 ¥490.00 · 3 笔')).toBeVisible();
+  await page.getByRole('button', { name: '记一笔', exact: true }).first().click();
+  await page.getByLabel('金额（元）', { exact: true }).fill('100');
+  await page.getByLabel('项目名称').fill('三人午餐');
+  await page.getByLabel('垫付人（可不参与消费）').selectOption('demo-m4');
+  await page.getByRole('button', { name: '清空', exact: true }).click();
+  for (const name of ['林知夏', '陈亦舟', '周予安']) await page.getByRole('checkbox', { name, exact: true }).check();
+  await expect(page.getByRole('dialog')).toContainText('33.34');
+  await page.getByRole('button', { name: '保存费用', exact: true }).click();
+  await expect(page.getByText('实际支出 ¥590.00 · 4 笔')).toBeVisible();
+  await page.getByRole('tab', { name: '结算', exact: true }).click();
+  await page.getByRole('button', { name: '记录已转账', exact: true }).first().click();
+  await page.getByLabel('转账金额（元，可小于建议金额）').fill('1.00');
+  await page.getByRole('button', { name: '记录此笔转账', exact: true }).click();
+  await page.getByRole('tab', { name: '账目', exact: true }).click();
+  await expect(page.getByRole('button', { name: '记一笔', exact: true })).toBeDisabled();
+  await page.getByRole('tab', { name: '结算', exact: true }).click();
+  await page.getByRole('button', { name: '撤销全部结算记录', exact: true }).click();
+  await page.getByRole('button', { name: '确认撤销', exact: true }).click();
+  await page.getByRole('tab', { name: '账目', exact: true }).click();
+  await expect(page.getByRole('button', { name: '记一笔', exact: true })).toBeEnabled();
+  const trip = await readTrip(page);
+  expect(trip?.expenses.find(expense => expense.title === '三人午餐')?.allocations.map(a => a.amount)).toEqual([3334, 3333, 3333]);
+  expect(trip?.settlements.filter(record => record.voidedAt === null)).toHaveLength(0);
+  await page.reload(); await expect(page.getByText('实际支出 ¥590.00 · 4 笔')).toBeVisible();
+  expect(errors).toEqual([]);
+});
+
+test('isolated invitation response, duplicate preview, backup overwrite, recovery and copy', async ({ page, browser }) => {
+  await demo(page);
+  await page.getByRole('button', { name: '邀请 周予安 填写', exact: true }).click();
+  await page.getByRole('button', { name: '生成邀请链接', exact: true }).click();
+  const inviteLink = await page.getByLabel('分享链接', { exact: true }).inputValue();
+  const invitation = decodeLink(inviteLink);
+  expect(JSON.stringify(invitation)).not.toContain('林知夏');
+  const original = await readTrip(page);
+  expect(original?.invitations.some(record => record.id === invitation.payloadId)).toBe(true);
+  const peerContext = await browser.newContext({ viewport: page.viewportSize()!, timezoneId: 'Asia/Shanghai' });
+  const receiverContext = await browser.newContext({ viewport: page.viewportSize()!, timezoneId: 'Asia/Shanghai' });
+  try {
+    const peer = await peerContext.newPage(); await peer.goto(inviteLink);
+    expect(await readTrip(peer)).toBeNull();
+    await peer.getByLabel('昵称', { exact: true }).fill('周予安');
+    await peer.getByLabel('出发城市', { exact: true }).fill('南京');
+    await peer.getByLabel('预算上限（元，选填）', { exact: true }).fill('1700');
+    await peer.getByLabel('可用开始日期 1', { exact: true }).fill(invitation.body.searchWindow.start);
+    await peer.getByLabel('可用结束日期 1', { exact: true }).fill(invitation.body.searchWindow.end);
+    await peer.getByRole('button', { name: '城市', exact: true }).click();
+    await peer.getByRole('button', { name: '查看方案', exact: true }).click();
+    await peer.getByRole('group', { name: '青岛意向', exact: true }).first().getByRole('button', { name: '赞成', exact: true }).click();
+    await peer.getByRole('button', { name: '生成反馈', exact: true }).click();
+    const responseLink = await peer.getByLabel('反馈链接', { exact: true }).inputValue();
+    expect((await readTrip(page))?.members[2].budgetCap).toBe(160000);
+    await page.getByRole('dialog').getByRole('button', { name: '关闭', exact: true }).click();
+    await page.getByRole('button', { name: '导入反馈', exact: true }).click();
+    await page.getByLabel('粘贴链接或 JSON 内容', { exact: true }).fill(responseLink);
+    await page.getByRole('button', { name: '预览导入', exact: true }).click();
+    await expect(page.getByRole('heading', { name: '成员反馈预览', exact: true })).toBeVisible();
+    expect((await readTrip(page))?.members[2].budgetCap).toBe(160000);
+    await page.getByRole('button', { name: '应用到此设备', exact: true }).click();
+    await expect(page.getByRole('dialog')).not.toBeVisible();
+    const applied = await readTrip(page);
+    expect(applied?.members[2].budgetCap).toBe(170000);
+    expect(applied?.appliedResponses).toHaveLength(1);
+    const revision = applied!.revision;
+    await page.getByRole('button', { name: '导入反馈', exact: true }).click();
+    await page.getByLabel('粘贴链接或 JSON 内容', { exact: true }).fill(responseLink);
+    await page.getByRole('button', { name: '预览导入', exact: true }).click();
+    await expect(page.getByText('该反馈已应用过，不会再次写入。', { exact: true })).toBeVisible();
+    expect((await readTrip(page))?.revision).toBe(revision);
+    await page.getByRole('dialog').getByRole('button', { name: '关闭', exact: true }).click();
+    await openMenu(page, '完整备份');
+    const downloadPromise = page.waitForEvent('download'); await page.getByRole('button', { name: '下载备份文件', exact: true }).click();
+    const download = await downloadPromise; const file = await readFile((await download.path())!);
+    const backup = JSON.parse(file.toString('utf8'));
+    expect(backup.body.trip.members[2].budgetCap).toBe(170000);
+    const receiver = await receiverContext.newPage(); await receiver.goto(new URL('.', inviteLink).href);
+    await expect(receiver.getByRole('heading', { level: 1 })).toContainText('小队');
+    expect((await readTrip(receiver))?.members[2].budgetCap).toBe(160000);
+    await openMenu(receiver, '导入');
+    await receiver.getByLabel('选择 JSON 文件').setInputFiles({ name: 'backup.json', mimeType: 'application/json', buffer: file });
+    await expect(receiver.getByRole('heading', { name: '备份预览', exact: true })).toBeVisible();
+    await receiver.getByRole('checkbox').check();
+    await receiver.getByRole('button', { name: '确认覆盖', exact: true }).click();
+    await expect(receiver.getByRole('dialog')).not.toBeVisible();
+    const restored = await readTrip(receiver);
+    expect(restored?.expenses).toEqual(backup.body.trip.expenses);
+    expect(restored?.members[2].budgetCap).toBe(170000);
+    await openMenu(receiver, '本地恢复');
+    await receiver.getByRole('button', { name: '预览', exact: true }).first().click();
+    await expect(receiver.getByRole('heading', { name: '恢复预览', exact: true })).toBeVisible();
+    await receiver.getByRole('button', { name: '确认恢复此版本', exact: true }).click();
+    await expect(receiver.getByRole('dialog')).not.toBeVisible();
+    expect((await readTrip(receiver))?.members[2].budgetCap).toBe(160000);
+    await openMenu(receiver, '导入');
+    await receiver.getByLabel('选择 JSON 文件').setInputFiles({ name: 'backup.json', mimeType: 'application/json', buffer: file });
+    await expect(receiver.getByRole('heading', { name: '备份预览', exact: true })).toBeVisible();
+    await receiver.getByRole('button', { name: '另存副本', exact: true }).click();
+    await expect(receiver.getByRole('dialog')).not.toBeVisible();
+    const copiedId = receiver.url().split('/trip/')[1].split('/')[0];
+    expect(copiedId).not.toBe('demo-trip');
+    const copied = await readTrip(receiver, copiedId);
+    expect(copied?.members.every(member => !member.id.startsWith('demo-'))).toBe(true);
+    expect(copied?.intents).toHaveLength(0); expect(copied?.confirmation).toBeNull();
+    expect(copied?.expenses).toHaveLength(3);
+  } finally { await peerContext.close(); await receiverContext.close(); }
+});

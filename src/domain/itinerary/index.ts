@@ -30,7 +30,7 @@ export function buildTemplateItineraryForB0(input: {
   activities: import('../types').Activity[];
 }> {
   const { plan, template, ids } = input;
-  const seeds = template.activities.map((activity) => ({
+  const seeds = template.activities.filter(activity => activity.dayOffset < plan.days).map((activity) => ({
     dayOffset: activity.dayOffset,
     startTime: activity.startTime,
     endTime: activity.endTime,

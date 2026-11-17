@@ -9,7 +9,6 @@ import {
   isValidDateOnly,
   isValidRange,
   mergeRanges,
-  rangeContains,
   toDayNumber,
   fromDayNumber,
 } from './calendar';
@@ -28,7 +27,7 @@ export function getMergedAvailability(member: { availability: Range[] }): Range[
 /** 资料完整成员的可用区间是否完整覆盖 [date, date + days - 1]。 */
 export function coversStay(ranges: readonly Range[], startDate: DateOnly, days: number): boolean {
   const end = addDays(startDate, days - 1);
-  return ranges.some((range) => rangeContains(range, { start: startDate, end }));
+  return ranges.some((range) => range.start <= startDate && range.end >= end);
 }
 
 /**

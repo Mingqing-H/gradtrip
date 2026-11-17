@@ -100,7 +100,7 @@ function Workbench({ runtime }: { runtime: Runtime }) {
         </Select> : <strong>毕业旅行</strong>}
         <div className="toolbar">{trip ? <Status status={state.saveStatus}/> : null}
           {trip ? <Button variant="secondary" onClick={() => setPanel({ type: 'share' })}><Share2 size={20}/>分享</Button> : null}
-          <Menu label="更多"><Button variant="ghost" onClick={() => openDialog('create')}><Plus size={20}/>创建旅行</Button>
+          <Menu label="更多"><Button variant="ghost" onClick={() => { const demo = state.records.find(record => record.isDemo); if (demo) go("/trip/" + demo.id + "/squad"); else void state.create("", true).then(result => { if (result.ok) navigate("/trip/" + result.value.id + "/squad"); }); }}>体验示例</Button><Button variant="ghost" onClick={() => openDialog('create')}><Plus size={20}/>创建旅行</Button>
             {trip ? <><Button variant="ghost" onClick={() => openDialog('rename')}>重命名</Button><Button variant="ghost" onClick={() => setPanel({ type: 'backup' })}>完整备份</Button>{trip.isDemo ? <Button variant="ghost" onClick={() => openDialog('reset')}>重置示例</Button> : null}</> : null}
             <Button variant="ghost" onClick={() => setPanel({ type: 'import' })}>导入</Button>
             {currentRecord ? <><Button variant="ghost" onClick={() => setPanel({ type: 'recovery' })}>本地恢复</Button><Button variant="ghost" onClick={() => openDialog('delete')}>删除旅行</Button></> : null}

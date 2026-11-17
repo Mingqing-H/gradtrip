@@ -45,7 +45,7 @@ export function hasValidAvailability(availability: unknown): boolean {
     if (typeof range !== 'object' || range === null) return false;
     const { start, end } = range as { start?: unknown; end?: unknown };
     if (!isValidDateOnly(start) || !isValidDateOnly(end)) return false;
-    return isValidRange({ start, end });
+    return start <= end;
   });
 }
 

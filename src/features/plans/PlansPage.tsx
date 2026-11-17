@@ -1,11 +1,12 @@
+import { localDateOnly, isDateOnly } from '../../domain/dates';
 // P02 方案工作区：筛选、候选比较、方案详情（成员适配/估算/意向/确认）。
 // 所有业务查询通过 services.planning，所有写入通过 execute（扁平 CommandPayload）。
 import { useMemo, useState } from 'react';
 import { Search, ChevronRight } from 'lucide-react';
-import { Button, Drawer, ErrorNotice, Input, Select, Status } from '../../components/ui';
+import { Button, Drawer, ErrorNotice, Input, Select } from '../../components/ui';
 import type { Id, WorkspaceProps } from '../../contracts/services';
 import type { IntentValue, Plan } from '../../domain/types';
-import { formatMoney } from '../../domain/money';
+import { formatMoney, parseMoney } from '../../domain/money';
 import { getDestinationAsset } from '../../data/assetsPlanning';
 import { getDestinations, CURRENT_TEMPLATE_VERSION } from '../../data/destinations';
 import styles from './plans.module.css';
@@ -19,7 +20,7 @@ interface EstimateDraft {
   reserve: string;
 }
 
-export function PlansPage({ trip, execute, saveStatus, services, openShare }: WorkspaceProps) {
+export function PlansPage({ trip, execute, services, openShare }: WorkspaceProps) {
   const [windowStart, setWindowStart] = useState(trip.searchWindow.start);
   const [windowEnd, setWindowEnd] = useState(trip.searchWindow.end);
   const [duration, setDuration] = useState<string>(String(trip.duration));
@@ -37,29 +38,21 @@ export function PlansPage({ trip, execute, saveStatus, services, openShare }: Wo
   );
   const evalById = useMemo(() => new Map(evaluations.map((e) => [e.planId, e])), [evaluations]);
   const sortedPlans = useMemo(() => {
-    // 排序沿用 B0 评估的 feasible / 冲突人数，再按日期与 ID 保证稳定（BR-05 元组在 services 内已计算）。
-    return [...trip.plans].sort((a, b) => {
-      const ea = evalById.get(a.id); const eb = evalById.get(b.id);
-      if (ea?.feasible !== eb?.feasible) return ea?.feasible ? -1 : 1;
-      const ca = ea?.members.filter((m) => m.timeFits === false || m.budgetFits === false).length ?? 0;
-      const cb = eb?.members.filter((m) => m.timeFits === false || m.budgetFits === false).length ?? 0;
-      if (ca !== cb) return ca - cb;
-      return a.startDate.localeCompare(b.startDate) || a.id.localeCompare(b.id);
-    });
-  }, [trip.plans, evalById]);
-
+    const plans = new Map(trip.plans.map(plan => [plan.id, plan]));
+    return evaluations.map(evaluation => plans.get(evaluation.planId)).filter((plan): plan is Plan => !!plan);
+  }, [trip.plans, evaluations]);
   const selectedPlan = trip.plans.find((p) => p.id === selectedPlanId) ?? null;
   const selectedEval = selectedPlanId ? evalById.get(selectedPlanId) : undefined;
   const consensus = selectedPlan
-    ? services.planning.getConsensusStatus(trip, selectedPlan.id, new Date().toISOString().slice(0, 10))
+    ? services.planning.getConsensusStatus(trip, selectedPlan.id, localDateOnly(new Date()))
     : null;
   const statusKind: ConsensusKind = trip.confirmation
-    ? (consensus?.confirmed ? 'confirmed' : 'needsReconfirm')
+    ? (services.planning.getConsensusStatus(trip, trip.confirmation.planId, localDateOnly(new Date())).confirmed ? 'confirmed' : 'needsReconfirm')
     : 'preparing';
 
   const commonDates = useMemo(
-    () => services.planning.findCommonDepartures(trip.members, trip.searchWindow, trip.duration),
-    [services.planning, trip.members, trip.searchWindow, trip.duration],
+    () => isDateOnly(windowStart) && isDateOnly(windowEnd) && windowStart <= windowEnd ? services.planning.findCommonDepartures(trip.members, { start: windowStart, end: windowEnd }, Number(duration)) : [],
+    [services.planning, trip.members, windowStart, windowEnd, duration],
   );
 
   const openDetail = (planId: Id) => {
@@ -78,9 +71,12 @@ export function PlansPage({ trip, execute, saveStatus, services, openShare }: Wo
     setBusy(true); setSubmitError('');
     const days = Number(duration) as Plan['days'];
     const templates = (getDestinations(CURRENT_TEMPLATE_VERSION) ?? []).filter((t) => t.supportedDurations.includes(days));
-    const plans: Plan[] = templates.map((template, index) => ({
-      id: `plan-${Date.now().toString(36)}-${index}`,
-      version: 1,
+    const existingFor = (destinationId: string) => trip.plans.find(plan => plan.destinationId === destinationId && plan.id === trip.itinerary.sourcePlanId)
+      ?? trip.plans.find(plan => plan.destinationId === destinationId && plan.id === trip.confirmation?.planId)
+      ?? trip.plans.find(plan => plan.destinationId === destinationId);
+    const plans: Plan[] = templates.map(template => ({
+      id: existingFor(template.id)?.id ?? crypto.randomUUID(),
+      version: (existingFor(template.id)?.version ?? 0) + 1,
       destinationId: template.id,
       templateVersion: CURRENT_TEMPLATE_VERSION,
       startDate: departure || commonDates[0] || windowStart,
@@ -118,9 +114,7 @@ export function PlansPage({ trip, execute, saveStatus, services, openShare }: Wo
   const saveEstimate = async () => {
     if (!selectedPlan || !estimateDraft) return;
     const parse = (text: string) => {
-      const value = Number(text);
-      if (!Number.isFinite(value) || value < 0 || !/^\d+(\.\d{1,2})?$/.test(text.trim())) return null;
-      return Math.round(value * 100);
+      try { return parseMoney(text); } catch { return null; }
     };
     const values = {
       lodgingPerNight: parse(estimateDraft.lodgingPerNight),
@@ -148,8 +142,8 @@ export function PlansPage({ trip, execute, saveStatus, services, openShare }: Wo
 
   const setTransportOverride = async (memberId: Id, yuanText: string) => {
     if (!selectedPlan) return;
-    const value = Number(yuanText);
-    if (!Number.isFinite(value) || value < 0) { setSubmitError('交通估算需为非负金额'); return; }
+    let value: number | null = null;
+    try { value = yuanText.trim() ? parseMoney(yuanText) : null; } catch { setSubmitError('交通估算需为非负金额，最多两位小数'); return; }
     const member = trip.members.find((m) => m.id === memberId);
     if (!member?.originCity) { setSubmitError('请先补全成员出发城市'); return; }
     setBusy(true); setSubmitError('');
@@ -160,7 +154,7 @@ export function PlansPage({ trip, execute, saveStatus, services, openShare }: Wo
         foodPerDay: selectedPlan.estimate.foodPerDay,
         activities: selectedPlan.estimate.activities,
         reserve: selectedPlan.estimate.reserve,
-        transportByMember: { ...selectedPlan.estimate.transportByMember, [memberId]: { originCity: member.originCity, amount: Math.round(value * 100) } },
+        transportByMember: { ...selectedPlan.estimate.transportByMember, [memberId]: value === null ? null : { originCity: member.originCity, amount: value } },
       } },
     });
     setBusy(false);
@@ -268,7 +262,7 @@ export function PlansPage({ trip, execute, saveStatus, services, openShare }: Wo
                   .filter((i) => i.memberId === memberEval.memberId && i.planId === selectedPlan.id && i.planVersion === selectedPlan.version && i.constraintRevision === trip.constraintRevision)
                   .sort((a, b) => b.recordedAt.localeCompare(a.recordedAt))[0];
                 return (
-                  <div className={styles.memberFitRow} key={memberEval.memberId}>
+                  <div className={styles.memberFitRow} key={memberEval.memberId} role="group" aria-label={(member?.name ?? memberEval.memberId) + "方案适配"}>
                     <strong>{member?.name ?? memberEval.memberId}</strong>
                     <span>{memberEval.total === null ? '估算待补' : formatMoney(memberEval.total)}</span>
                     <span className={memberEval.budgetFits === false ? styles.metricConflict : memberEval.budgetFits === true ? styles.metricOk : styles.metricUnknown}>
@@ -330,7 +324,7 @@ export function PlansPage({ trip, execute, saveStatus, services, openShare }: Wo
                     <span />
                     {member.originCity ? <Input label="手工交通（元，留空按表）" inputMode="decimal" defaultValue=""
                       key={`${member.id}-${currentOverride?.amount ?? 'none'}`}
-                      onBlur={(e) => { if (e.target.value.trim() !== '') void setTransportOverride(member.id, e.target.value); }} /> : <span className={styles.metricUnknown}>城市待补充</span>}
+                      onBlur={(e) => { if (e.target.value.trim() || currentOverride) void setTransportOverride(member.id, e.target.value); }} /> : <span className={styles.metricUnknown}>城市待补充</span>}
                   </div>
                 );
               })}
@@ -341,7 +335,6 @@ export function PlansPage({ trip, execute, saveStatus, services, openShare }: Wo
               {consensus?.reasons.length ? (
                 <ul className={styles.blockerList}>{consensus.reasons.map((reason, i) => <li key={i}>{reason}</li>)}</ul>
               ) : <p className={styles.metricOk}>全员条件满足，可以确认。</p>}
-              <Status status={saveStatus} />
             </section>
           </div>
         ) : null}

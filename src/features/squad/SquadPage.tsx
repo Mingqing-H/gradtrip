@@ -1,7 +1,7 @@
 // P01 小队工作区：成员列表、资料完整度、添加/编辑/删除、邀请与导入回调。
 import { useMemo, useState } from 'react';
 import { Plus, Pencil, Trash2, Send, Download } from 'lucide-react';
-import { Button, Dialog, Drawer, ErrorNotice, Status } from '../../components/ui';
+import { Button, Dialog, Drawer, ErrorNotice } from '../../components/ui';
 import type { Id, WorkspaceProps } from '../../contracts/services';
 import { getMemberProfileStatus, getMissingProfileFields } from '../../domain/planning';
 import { formatMoney } from '../../domain/money';
@@ -13,7 +13,7 @@ interface EditorState {
   draft: MemberDraft;
 }
 
-export function SquadPage({ trip, execute, saveStatus, openInvite, openImport }: WorkspaceProps) {
+export function SquadPage({ trip, execute, openInvite, openImport }: WorkspaceProps) {
   const [editor, setEditor] = useState<EditorState | null>(null);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [removingId, setRemovingId] = useState<Id | null>(null);
@@ -44,7 +44,7 @@ export function SquadPage({ trip, execute, saveStatus, openInvite, openImport }:
     const input = draftToMemberInput(editor.draft, budgetCap);
     setBusy(true); setSubmitError('');
     const payload = editor.memberId === null
-      ? { type: 'member.add' as const, member: { id: `m-${Date.now().toString(36)}`, ...input } }
+      ? { type: 'member.add' as const, member: { id: crypto.randomUUID(), ...input } }
       : { type: 'member.update' as const, memberId: editor.memberId, changes: input };
     const result = await execute(payload);
     setBusy(false);
@@ -80,7 +80,6 @@ export function SquadPage({ trip, execute, saveStatus, openInvite, openImport }:
       </div>
       <div className={styles.summary}>
         <span>{completeCount} 人资料完整</span>
-        <Status status={saveStatus} />
         <span className={styles.grow} />
         <Button variant="ghost" onClick={openImport}><Download size={16} /> 导入反馈</Button>
       </div>
@@ -103,7 +102,7 @@ export function SquadPage({ trip, execute, saveStatus, openInvite, openImport }:
                 const missing = getMissingProfileFields(member);
                 return (
                   <tr key={member.id}>
-                    <td><span className={styles.memberName}>{member.name}</span><br /><span className={styles.memberSub}>{member.id}</span></td>
+                    <td><span className={styles.memberName}>{member.name}</span></td>
                     <td>{member.originCity ?? <span className="muted">待补充</span>}</td>
                     <td>{member.budgetCap === null ? <span className="muted">待补充</span> : formatMoney(member.budgetCap)}</td>
                     <td>{member.availability.length > 0 ? `${member.availability[0].start} 起${member.availability.length > 1 ? ` · 另 ${member.availability.length - 1} 段` : ''}` : <span className="muted">待补充</span>}</td>
@@ -111,7 +110,7 @@ export function SquadPage({ trip, execute, saveStatus, openInvite, openImport }:
                     <td><span className={`${styles.badge} ${status === 'complete' ? styles.badgeComplete : styles.badgeIncomplete}`}>{status === 'complete' ? '资料完整' : `待补 ${missing.join('、')}`}</span></td>
                     <td>
                       <div className={styles.rowActions}>
-                        <button className={styles.linkButton} onClick={() => openEdit(member.id)}>编辑</button>
+                        <button className={styles.linkButton} onClick={() => openEdit(member.id)} aria-label={"编辑 " + member.name}>编辑</button>
                         <button className={styles.linkButton} onClick={() => openInvite(member.id)} aria-label={`邀请 ${member.name} 填写`}><Send size={16} /> 邀请</button>
                         <button className={`${styles.linkButton} ${styles.danger}`} onClick={() => { setSubmitError(''); setRemovingId(member.id); }} aria-label={`删除 ${member.name}`}><Trash2 size={16} /></button>
                       </div>
@@ -128,7 +127,7 @@ export function SquadPage({ trip, execute, saveStatus, openInvite, openImport }:
                 <div className={styles.memberCard} key={member.id}>
                   <div className={styles.memberCardHead}>
                     <strong>{member.name}</strong>
-                    <button className={styles.linkButton} onClick={() => openEdit(member.id)}><Pencil size={16} /> 编辑</button>
+                    <button className={styles.linkButton} onClick={() => openEdit(member.id)} aria-label={"编辑 " + member.name}><Pencil size={16} /> 编辑</button>
                   </div>
                   <div className={styles.memberCardFields}>
                     <span>出发地：{member.originCity ?? '待补充'}</span>
@@ -137,7 +136,7 @@ export function SquadPage({ trip, execute, saveStatus, openInvite, openImport }:
                     <span>{status === 'complete' ? '资料完整' : '资料待补充'}</span>
                   </div>
                   <div className={styles.memberCardActions}>
-                    <Button variant="secondary" onClick={() => openInvite(member.id)}><Send size={16} /> 邀请</Button>
+                    <Button variant="secondary" onClick={() => openInvite(member.id)} aria-label={"邀请 " + member.name + " 填写"}><Send size={16} /> 邀请</Button>
                     <Button variant="ghost" onClick={() => { setSubmitError(''); setRemovingId(member.id); }}><Trash2 size={16} /> 删除</Button>
                   </div>
                 </div>

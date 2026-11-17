@@ -8,7 +8,8 @@ import type {
   CommandPayload,
   PlanningCommand as B0PlanningCommand,
 } from '../../domain/commands';
-import type { Trip, Id, Member, Plan } from '../../domain/types';
+import { addDays } from '../dates';
+import type { Trip, Id, Member } from '../../domain/types';
 import type { BusinessError } from '../../contracts/result';
 import { failure, success, type Result } from '../../contracts/result';
 import type {
@@ -21,7 +22,7 @@ import type {
 } from '../../contracts/services';
 import {
   applyPlanningCommand as applyInternal,
-  toPlanningContext,
+  toPlanningContext, sameTransportMaps,
   updateMemberConstraints as updateInternal,
   type PlanningCommandContext,
 } from './commands';
@@ -49,15 +50,6 @@ function mergeProfile(current: Member, changes: Partial<Omit<Member, 'id'>>): Me
 
 function has(object: object, key: string): boolean {
   return Object.prototype.hasOwnProperty.call(object, key);
-}
-
-function firstTransportOverride(
-  map: Plan['estimate']['transportByMember'],
-): { memberId: Id; amount: number } | undefined {
-  for (const [memberId, value] of Object.entries(map)) {
-    if (value) return { memberId, amount: value.amount };
-  }
-  return undefined;
 }
 
 function toInternalCommand(trip: Trip, payload: B0PlanningCommand): InternalCommand | null {
@@ -100,9 +92,7 @@ function toInternalCommand(trip: Trip, payload: B0PlanningCommand): InternalComm
                   ...(estimate.foodPerDay !== undefined ? { foodPerDay: estimate.foodPerDay } : {}),
                   ...(estimate.activities !== undefined ? { activities: estimate.activities } : {}),
                   ...(estimate.reserve !== undefined ? { reserve: estimate.reserve } : {}),
-                  ...(estimate.transportByMember !== undefined
-                    ? { transportOverride: firstTransportOverride(estimate.transportByMember) }
-                    : {}),
+
                 },
               }
             : {}),
@@ -196,12 +186,16 @@ export const applyPlanningCommand: CommandHandler = (trip, payload, context, dep
     if (payload.plans.length < 1 || payload.plans.length > 20) {
       return failure('VALIDATION', '候选方案数量需在 1～20 之间');
     }
+    const ids = new Set(payload.plans.map(plan => plan.id));
+    if ([trip.itinerary.sourcePlanId, trip.confirmation?.planId].some(id => id && !ids.has(id))) return failure('VALIDATION', '请保留已有日程或确认所引用的方案');
     return success({
       ...trip,
       searchWindow: payload.searchWindow,
       duration: payload.duration,
       plans: payload.plans.map((p) => ({ ...p })),
-      intents: [],
+      intents: trip.intents.filter(intent => ids.has(intent.planId)),
+      invitations: trip.invitations.filter(invitation => Object.keys(invitation.planVersions).every(id => ids.has(id))),
+      appliedResponses: trip.appliedResponses.filter(response => trip.invitations.some(invitation => invitation.id === response.invitationId && Object.keys(invitation.planVersions).every(id => ids.has(id)))),
       constraintRevision: trip.constraintRevision + 1,
     });
   }
@@ -209,20 +203,30 @@ export const applyPlanningCommand: CommandHandler = (trip, payload, context, dep
   if (!internal) return failure('NOT_IMPLEMENTED', '该规划命令尚未实现');
   const result = applyInternal(trip, internal, toInternalContext(context));
   if (!result.ok) return toResult(result);
-  // 首次确认：若无日程且注入了 T03 模板日程构建器，则按其能力生成；
+  if (payload.type === 'plan.update' && payload.changes.estimate) {
+    const original = trip.plans.find(plan => plan.id === payload.planId)!;
+    const current = result.trip.plans.find(plan => plan.id === payload.planId)!;
+    const transportByMember = payload.changes.estimate.transportByMember;
+    if (!sameTransportMaps(current.estimate.transportByMember, transportByMember)) {
+      const changed = { ...current, version: current.version === original.version ? current.version + 1 : current.version, estimate: { ...current.estimate, transportByMember: structuredClone(transportByMember) } };
+      return success({ ...result.trip, plans: result.trip.plans.map(plan => plan.id === changed.id ? changed : plan), constraintRevision: result.trip.constraintRevision === trip.constraintRevision ? trip.constraintRevision + 1 : result.trip.constraintRevision });
+    }
+  }
+  // 首次确认：通过已注入的模板构建器生成；已有日程默认保留。
   // 已有日程默认保留（itineraryMode='preserve'），替换由 T03 的 replaceFromTemplate 命令负责。
   if (payload.type === 'plan.confirm') {
     const hasItinerary = result.trip.itinerary.dateRange !== null || result.trip.itinerary.activities.length > 0;
     const plan = result.trip.plans.find((p) => p.id === payload.planId);
-    if (!hasItinerary && plan && dependencies.buildTemplateItinerary) {
+    if ((!hasItinerary || payload.itineraryMode === 'replace') && plan) {
       const templateResult = dependencies.planning.getTemplate(plan.destinationId, plan.templateVersion);
       if (templateResult.ok) {
         const built = dependencies.buildTemplateItinerary({ plan, template: templateResult.value, ids: context.ids });
         if (!built.ok) return built;
         return success({ ...result.trip, itinerary: built.value });
       }
-      // 模板版本不受支持时保留确认但不生成日程，并如实提示（不伪造日程）。
+      return templateResult;
     }
+    if (hasItinerary && plan) return success({ ...result.trip, itinerary: { ...result.trip.itinerary, dateRange: { start: plan.startDate, end: addDays(plan.startDate, plan.days - 1) } } });
   }
   return success(result.trip);
 };
@@ -296,9 +300,8 @@ export const planningService: PlanningService = {
   getConsensusStatus(trip, planId, today): ServiceConsensusStatus {
     const status = getConsensusStatus(toPlanningContext(trip), planningDataDeps);
     const reasons: string[] = [];
-    if (status.reason) reasons.push(status.reason.message);
     const plan = trip.plans.find((p) => p.id === planId);
-    if (plan) {
+    {
       for (const blocker of getConfirmationBlockers(toPlanningContext(trip), planId, today, planningDataDeps)) {
         if ('message' in blocker) reasons.push(blocker.message);
       }

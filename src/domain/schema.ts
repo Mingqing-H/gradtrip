@@ -35,7 +35,7 @@ export const activitySchema = z.strictObject({
 }).refine(a => (a.startTime === null && a.endTime === null) || (a.startTime !== null && a.endTime !== null && a.startTime < a.endTime), '请填写有效的起止时间');
 export const expenseSchema = z.strictObject({
   id: idSchema, title: z.string().trim().min(1).max(120), date: dateSchema, category: z.string().min(1).max(40),
-  amount: centsSchema.min(1), payerId: idSchema, splitMode: z.enum(['equal', 'custom']),
+  amount: centsSchema.min(1).max(10_000_000), payerId: idSchema, splitMode: z.enum(['equal', 'custom']),
   allocations: z.array(z.strictObject({ memberId: idSchema, amount: centsSchema })).min(1).max(20), createdAt: timestamp,
 });
 export const settlementSchema = z.strictObject({

@@ -115,7 +115,7 @@ export function compareDateOnly(a: DateOnly, b: DateOnly): -1 | 0 | 1 {
 
 /** 是否为有效日期区间（起日均不晚于止日）。 */
 export function isValidRange(range: Range): boolean {
-  return isValidDateOnly(range.start) && isValidDateOnly(range.end) && compareDateOnly(range.start, range.end) <= 0;
+  return isValidDateOnly(range.start) && isValidDateOnly(range.end) && range.start <= range.end;
 }
 
 /**

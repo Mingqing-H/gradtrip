@@ -346,9 +346,9 @@ export function applyResponseToTrip(
   if (bodyResult) {
     return failure('VALIDATION', '反馈中的成员资料结构无效', bodyResult);
   }
-  // 重复 payloadId：无操作（BR-14）。应用层通常已短路；此处兜底拒绝重复写入。
+  // 重复 payloadId：事务内返回原值，不增加任何版本或历史（BR-14）。
   if (trip.appliedResponses.some((record) => record.id === input.id)) {
-    return failure('CONFLICT', '该反馈已应用过，不会再次写入');
+    return { ok: true, value: trip };
   }
 
   const checks = evaluateResponse(trip, input, planning);

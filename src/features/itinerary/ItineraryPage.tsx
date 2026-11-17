@@ -14,8 +14,8 @@ import {
   Plus,
   Trash2,
 } from 'lucide-react';
-import { Button, Dialog, ErrorNotice, Input, Menu, Select, Status } from '../../components/ui';
-import { formatMoney } from '../../domain/money';
+import { Button, Dialog, ErrorNotice, Input, Menu, Select } from '../../components/ui';
+import { formatMoney, parseMoney } from '../../domain/money';
 import {
   findOutOfRangeActivities,
   findTimeOverlaps,
@@ -67,17 +67,16 @@ function formFromActivity(activity: Activity): ActivityForm {
 
 function parseMoneyCents(text: string): number | null {
   if (text.trim() === '') return null;
-  const match = /^(\d+)(?:\.(\d{1,2}))?$/.exec(text.trim());
-  if (match === null) return Number.NaN;
-  return Number(match[1] as string) * 100 + Number((match[2] ?? '').padEnd(2, '0'));
+  try { return parseMoney(text); } catch { return Number.NaN; }
 }
 
-export function ItineraryPage({ trip, execute, saveStatus }: WorkspaceProps) {
+export function ItineraryPage({ trip, execute, services }: WorkspaceProps) {
   const { activities, dateRange } = trip.itinerary;
   const [editing, setEditing] = useState<{ id: string | null } | null>(null);
   const [form, setForm] = useState<ActivityForm>(emptyForm(dateRange?.start ?? ''));
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  const [replacing, setReplacing] = useState(false);
 
   const groups = useMemo(() => groupActivitiesByDate(activities), [activities]);
   const overlaps = useMemo(() => findTimeOverlaps(activities), [activities]);
@@ -91,12 +90,11 @@ export function ItineraryPage({ trip, execute, saveStatus }: WorkspaceProps) {
   );
 
   // 个人基准估算 E_i 由 T02 规划服务注入；本页只展示可见差额，不重新估算。
-  const baseEstimates = useMemo(() => {
-    const result: Record<string, number | null> = {};
-    for (const member of trip.members) result[member.id] = null;
-    return result;
-  }, [trip.members]);
-  const plan = trip.plans.find((candidate) => candidate.id === trip.itinerary.sourcePlanId);
+  const plan = trip.plans.find(candidate => candidate.id === trip.confirmation?.planId)
+    ?? trip.plans.find(candidate => candidate.id === trip.itinerary.sourcePlanId);
+  const baseEstimates = useMemo(() => Object.fromEntries(trip.members.map(member => [
+    member.id, plan ? services.planning.evaluatePersonalPlan({ member, plan }).total : null,
+  ])), [trip.members, plan, services.planning]);
   const budget = useMemo(
     () =>
       getItineraryBudget({
@@ -193,8 +191,6 @@ export function ItineraryPage({ trip, execute, saveStatus }: WorkspaceProps) {
           <CalendarPlus size={20} /> 添加安排
         </Button>
       </header>
-
-      <Status status={saveStatus} />
       {error !== null && <ErrorNotice>{error}</ErrorNotice>}
       {outOfRange.length > 0 && (
         <ErrorNotice>
@@ -286,6 +282,8 @@ export function ItineraryPage({ trip, execute, saveStatus }: WorkspaceProps) {
 
         <aside className={styles.summary} aria-label="日程预算摘要">
           <h2>预算摘要</h2>
+          {budget.perMember.some(row => row.baseEstimate !== null) ? <dl>{budget.perMember.filter(row => row.baseEstimate !== null).map(row => <div key={row.memberId}><dt>{trip.members.find(member => member.id === row.memberId)?.name}</dt><dd>方案 {formatMoney(row.baseEstimate!)} → {budget.complete ? '修订' : '已知部分'} {formatMoney(row.revisedEstimate!)}（差额 {formatMoney(row.revisedEstimate! - row.baseEstimate!)}）</dd></div>)}</dl> : null}
+          {plan ? <Button variant="secondary" onClick={() => setReplacing(true)}>重新使用方案日程</Button> : null}
           <p className="muted">方案原活动分项 {formatMoney(budget.planActivitiesEstimate)}</p>
           <p className="muted">当前已知活动合计 {formatMoney(budget.knownActivitiesTotal)}</p>
           {budget.unknownActivityCount > 0 && (
@@ -295,7 +293,7 @@ export function ItineraryPage({ trip, execute, saveStatus }: WorkspaceProps) {
             <p className="muted">{budget.includedCount} 项费用已含于方案，不重复累计</p>
           )}
           {!budget.complete && (
-            <p className="muted">个人基准估算待规划模块提供，当前无法判断全员预算差异。</p>
+            <p className="muted">还有未估算的费用，当前显示已知部分。</p>
           )}
           {budget.perMember.some((row) => row.overBudget === true) && (
             <div className={styles.warn}>
@@ -312,10 +310,13 @@ export function ItineraryPage({ trip, execute, saveStatus }: WorkspaceProps) {
               </ul>
             </div>
           )}
-          <p className="muted">日程估算与实际支出分开，记账请前往账本。</p>
+
         </aside>
       </div>
 
+      <Dialog open={replacing} title="替换现有日程？" onClose={() => setReplacing(false)} footer={<Button variant="danger" disabled={busy} onClick={() => { if (!plan) return; setBusy(true); void execute({ type: 'itinerary.replaceFromTemplate', planId: plan.id, confirmed: true }).then(result => { setBusy(false); if (result.ok) setReplacing(false); else setError(result.error.message); }); }}>确认替换日程</Button>}>
+        <p>将覆盖 {activities.length} 项安排，手工修改会被替换。账本不受影响。</p>{error ? <ErrorNotice>{error}</ErrorNotice> : null}
+      </Dialog>
       <Dialog
         open={editing !== null}
         title={editing?.id ? '编辑安排' : '添加安排'}

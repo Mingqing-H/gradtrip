@@ -5,7 +5,7 @@
  */
 import { useMemo, useState } from 'react';
 import { ArrowRight, Plus, Receipt, RotateCcw, ShieldAlert } from 'lucide-react';
-import { Button, Dialog, ErrorNotice, Input, Select, Status } from '../../components/ui';
+import { Button, Dialog, ErrorNotice, Input, Select } from '../../components/ui';
 import { formatMoney, parseMoney } from '../../domain/money';
 import { getLedgerSummary } from '../../domain/ledger/balances';
 import {
@@ -48,7 +48,7 @@ function emptyForm(trip: WorkspaceProps['trip']): ExpenseForm {
   };
 }
 
-export function LedgerPage({ trip, execute, saveStatus }: WorkspaceProps) {
+export function LedgerPage({ trip, execute }: WorkspaceProps) {
   const [tab, setTab] = useState<'expenses' | 'settlement'>('expenses');
   const [form, setForm] = useState<ExpenseForm | null>(null);
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -109,10 +109,10 @@ export function LedgerPage({ trip, execute, saveStatus }: WorkspaceProps) {
       });
     }
     if (amountCents === null || !Number.isSafeInteger(amountCents) || amountCents <= 0) return [];
-    return splitEqualCents(amountCents, form.participantIds).map((allocation) => ({
-      memberId: allocation.memberId,
-      amount: allocation.amount,
-    }));
+    if (form.participantIds.length === 0) return [];
+    try {
+      return splitEqualCents(amountCents, form.participantIds).map(allocation => ({ memberId: allocation.memberId, amount: allocation.amount }));
+    } catch { return []; }
   }, [form, amountCents]);
 
   const allocationPreview = useMemo(() => {
@@ -314,8 +314,6 @@ export function LedgerPage({ trip, execute, saveStatus }: WorkspaceProps) {
           结算
         </button>
       </div>
-
-      <Status status={saveStatus} />
       {error !== null && <ErrorNotice>{error}</ErrorNotice>}
 
       {tab === 'expenses' && (

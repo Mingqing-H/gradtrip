@@ -35,3 +35,7 @@ export function mergeRanges(ranges: Range[]): Range[] {
 // Compatibility names used by the itinerary/ledger public entry points.
 export const isValidDateOnly = isDateOnly;
 export const diffDays = daysBetween;
+
+export function localDateOnly(date: Date): DateOnly {
+  return [date.getFullYear().toString().padStart(4, '0'), (date.getMonth() + 1).toString().padStart(2, '0'), date.getDate().toString().padStart(2, '0')].join('-');
+}

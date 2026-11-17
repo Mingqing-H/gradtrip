@@ -1,6 +1,8 @@
 import { test, expect, type Page } from '@playwright/test';
 async function createTrip(page: Page, name = '自动验收旅行') {
   await page.goto('./');
+  await expect(page.getByRole('heading', { level: 1 })).toBeVisible();
+  if (!await page.getByRole('button', { name: '创建旅行', exact: true }).first().isVisible()) await page.locator('summary').click();
   await page.getByRole('button', { name: '创建旅行', exact: true }).first().click();
   await page.getByLabel('旅行名称', { exact: true }).fill(name);
   await page.getByRole('dialog').getByRole('button', { name: '创建旅行', exact: true }).click();
@@ -27,6 +29,9 @@ test('create, rename, refresh, restore last workspace, keyboard dialog and delet
   await page.getByRole('dialog').press('Escape'); await expect(page.getByRole('dialog')).not.toBeVisible();
   await menu(page, '删除旅行');
   await page.getByRole('button', { name: '确认删除' }).click();
+  if (await page.getByRole('combobox', { name: '选择旅行' }).isVisible()) {
+    await menu(page, '删除旅行'); await page.getByRole('button', { name: '确认删除' }).click();
+  }
   await expect(page.getByRole('heading', { name: '出发，从一支小队开始' })).toBeVisible();
   await page.reload();
   await expect(page.getByRole('heading', { name: '出发，从一支小队开始' })).toBeVisible();
@@ -86,6 +91,8 @@ test('unknown routes and trip IDs preserve existing content', async ({ page }) =
 test('unavailable IndexedDB enables explicit temporary mode with export', async ({ page, context }) => {
   await context.addInitScript(() => { IDBFactory.prototype.open = () => { throw new DOMException('test blocked', 'SecurityError'); }; });
   await page.goto('./'); await expect(page.getByText(/临时体验模式：/)).toBeVisible();
+  await expect(page.getByRole('heading', { level: 1 })).toBeVisible();
+  if (!await page.getByRole('button', { name: '创建旅行', exact: true }).first().isVisible()) await page.locator('summary').click();
   await page.getByRole('button', { name: '创建旅行', exact: true }).first().click();
   await page.getByLabel('旅行名称').fill('临时旅行');
   await page.getByRole('dialog').getByRole('button', { name: '创建旅行', exact: true }).click();

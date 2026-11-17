@@ -15,7 +15,8 @@
     "build": "vite build",
     "preview": "vite preview --host 127.0.0.1 --port 4173 --strictPort",
     "check:bundle-size": "node scripts/check-bundle-size.mjs",
-    "check:integration": "node scripts/check-integration.mjs"
+    "check:integration": "node scripts/check-integration.mjs",
+    "benchmark:domain": "node scripts/benchmark-domain.mjs"
   },
   "dependencies": {
     "idb": "8.0.4",

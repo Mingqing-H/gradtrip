@@ -5,6 +5,7 @@ import { buildBackupEnvelope, previewResponseImport, remapTripIds, validateBacku
 import type { BackupBody, InvitationBody, ResponseBody, SharingEnvelope } from '../../domain/sharing/types';
 import { useSharingApp } from './useEnvelope';
 import { Button, Dialog, ErrorNotice } from '../../components/ui';
+import { formatMoney } from '../../domain/money';
 
 type CurrentProps = Omit<SharingPanelProps, 'trip'> & { trip: Trip };
 function EnvelopeOutput({ envelope, services, filename }: { envelope: SharingEnvelope; services: SharingPanelProps['services']; filename: string }) {
@@ -14,7 +15,7 @@ function EnvelopeOutput({ envelope, services, filename }: { envelope: SharingEnv
   const link = result?.ok ? result.value : null;
   const download = () => { const result = app.downloadEnvelope(envelope, filename); setMessage(result.ok ? '已请求下载文件' : result.error.message); };
   return <div className="stack">
-    {link ? <label>分享链接<textarea readOnly value={link} rows={3} onFocus={event => event.target.select()}/></label> : envelope.type !== 'backup' ? <p>链接过长，请使用文件传递。</p> : null}
+    {link ? <label>分享链接<textarea aria-label="分享链接" readOnly value={link} rows={3} onFocus={event => event.target.select()}/></label> : envelope.type !== 'backup' ? <p>链接过长，请使用文件传递。</p> : null}
     <div className="toolbar">{link ? <Button onClick={() => void app.copyShareUrl(link).then(result => setMessage(result.ok ? '已复制' : result.error.message))}>复制链接</Button> : null}<Button variant="secondary" onClick={download}>下载{envelope.type === 'invitation' ? '邀请' : envelope.type === 'snapshot' ? '快照' : '备份'}文件</Button></div>
     {message ? <p role="status">{message}</p> : null}
   </div>;
@@ -143,14 +144,21 @@ function ImportPanel({ panel, onClose, services, onApplied }: SharingPanelProps 
   const backup = envelope?.type === 'backup' ? validateBackupForImport(envelope as SharingEnvelope<BackupBody>) : null;
   return <Dialog open title="导入" onClose={onClose}>
     {error ? <ErrorNotice>{error}</ErrorNotice> : null}
-    {!envelope ? <div className="stack"><label className="field">粘贴链接或 JSON 内容<textarea value={text} rows={4} onChange={event => setText(event.target.value)}/></label>
+    {!envelope ? <div className="stack"><label className="field">粘贴链接或 JSON 内容<textarea aria-label="粘贴链接或 JSON 内容" value={text} rows={4} onChange={event => setText(event.target.value)}/></label>
       <div className="toolbar"><Button disabled={busy || !text.trim()} onClick={() => void parse(text)}>预览导入</Button><Button variant="secondary" onClick={() => fileRef.current?.click()}>选择文件</Button></div>
       <input ref={fileRef} type="file" accept=".json,application/json" aria-label="选择 JSON 文件" hidden onChange={event => { const file = event.target.files?.[0]; if (file) void readFile(file); }}/></div>
       : <div className="stack">
         {envelope.type === 'response' ? <><h2>成员反馈预览</h2>{!preview ? <ErrorNotice>此设备没有可应用反馈的原旅行，请在组织者设备导入。</ErrorNotice> : <>
           <p>{preview.memberName}</p>
-          {preview.profileBefore ? <dl>{(['name', 'originCity', 'budgetCap', 'availability', 'preferences'] as const).map(key => <div key={key}><dt>{({ name: '昵称', originCity: '出发城市', budgetCap: '预算上限（分）', availability: '可用日期', preferences: '偏好' })[key]}</dt><dd>{JSON.stringify(preview.profileBefore?.[key])} → {JSON.stringify(preview.profileAfter?.[key])}</dd></div>)}</dl> : null}
-          {preview.intentsAfter.map(intent => <p key={intent.planId}>{services.planning.getTemplate(localTrip!.plans.find(plan => plan.id === intent.planId)?.destinationId ?? '', localTrip!.plans.find(plan => plan.id === intent.planId)?.templateVersion ?? 1).ok ? localTrip!.plans.find(plan => plan.id === intent.planId)?.startDate : intent.planId}：{({ approve: '赞成', acceptable: '可接受', decline: '不参加' })[intent.value]}</p>)}
+          {preview.profileBefore && preview.profileAfter ? <dl>{(['name', 'originCity', 'budgetCap', 'availability', 'preferences'] as const).filter(key => JSON.stringify(preview.profileBefore![key]) !== JSON.stringify(preview.profileAfter![key])).map(key => {
+            const format = (profile: NonNullable<typeof preview.profileBefore>) => key === 'budgetCap' ? profile.budgetCap === null ? '未填写' : formatMoney(profile.budgetCap) : key === 'availability' ? profile.availability.map(range => range.start + ' 至 ' + range.end).join('、') || '未填写' : key === 'preferences' ? profile.preferences.join('、') || '无' : profile[key] || '未填写';
+            return <div key={key}><dt>{({ name: '昵称', originCity: '出发城市', budgetCap: '预算上限', availability: '可用日期', preferences: '偏好' })[key]}</dt><dd>{format(preview.profileBefore!)} → {format(preview.profileAfter!)}</dd></div>;
+          })}</dl> : null}
+          {preview.intentsAfter.map((intent, index) => {
+            const plan = localTrip!.plans.find(plan => plan.id === intent.planId);
+            const template = plan && services.planning.getTemplate(plan.destinationId, plan.templateVersion);
+            return <p key={intent.planId}>{template?.ok ? template.value.name + ' · ' + plan!.startDate : '方案 ' + (index + 1)}：{({ approve: '赞成', acceptable: '可接受', decline: '不参加' })[intent.value]}</p>;
+          })}
           {preview.state === 'duplicate' ? <p>该反馈已应用过，不会再次写入。</p> : preview.state === 'applicable' || preview.state === 'resubmission' ? <Button disabled={busy} onClick={() => void applyResponse(envelope as SharingEnvelope<ResponseBody>)}>{preview.state === 'resubmission' ? '确认替换旧反馈' : '应用到此设备'}</Button> : <ErrorNotice>{preview.error?.message}</ErrorNotice>}
         </>}</> : null}
         {backup?.ok ? <><h2>备份预览</h2><p>{backup.value.name} · {backup.value.members.length} 人 · {backup.value.expenses.length} 笔费用</p>

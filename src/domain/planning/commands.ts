@@ -175,6 +175,8 @@ function applyMemberRemove(trip: Trip, memberId: Id): PlanningResult {
     trip: {
       ...trip,
       members: trip.members.filter((m) => m.id !== memberId),
+      invitations: trip.invitations.filter(invitation => invitation.memberId !== memberId),
+      appliedResponses: trip.appliedResponses.filter(response => !trip.invitations.some(invitation => invitation.id === response.invitationId && invitation.memberId === memberId)),
       intents: trip.intents.filter((i) => i.memberId !== memberId),
       plans: trip.plans.map((plan) => {
         if (!(memberId in plan.estimate.transportByMember)) return plan;
@@ -360,7 +362,7 @@ function plansEqual(a: Plan, b: Plan): boolean {
   );
 }
 
-function sameTransportMaps(
+export function sameTransportMaps(
   a: Record<Id, { originCity: string; amount: number } | null>,
   b: Record<Id, { originCity: string; amount: number } | null>,
 ): boolean {

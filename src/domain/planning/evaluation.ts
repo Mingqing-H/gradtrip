@@ -4,7 +4,7 @@
 import { addDays, toDayNumber } from './calendar';
 import { computeEstimateBreakdown, estimateRangeOf, resolveTransportCents } from './estimates';
 import { getMemberProfileStatus } from './profile';
-import { getTimeState } from './availability';
+import { getTimeState, getMergedAvailability } from './availability';
 import type { Cents, DateOnly, Id, Intent, Member, Plan, Range } from './contract';
 import type {
   CurrentIntentView,
@@ -21,9 +21,13 @@ export function evaluateMemberAgainstPlan(
   plan: Plan,
   deps: PlanningDeps,
 ): MemberPlanStatus {
-  const profile = getMemberProfileStatus(member);
-  // 时间只看可用日期；预算只看预算上限与已知估算（BR-05 逐项判定）。
-  const time = getTimeState(member, plan.startDate, plan.days);
+  return evaluatePreparedMember(member, plan, deps, getMemberProfileStatus(member), getTimeState(member, plan.startDate, plan.days));
+}
+
+function evaluatePreparedMember(
+  member: Member, plan: Plan, deps: PlanningDeps,
+  profile: MemberPlanStatus['profile'], time: MemberPlanStatus['time'],
+): MemberPlanStatus {
   const breakdown = computeEstimateBreakdown(plan, member, deps);
   const estimate = breakdown.total;
 
@@ -86,10 +90,11 @@ export function getCurrentIntent(
   planVersion: number,
   constraintRevision: number,
 ): CurrentIntentView | undefined {
-  const matches = intents
-    .filter((i) => i.memberId === memberId && i.planId === planId && isCurrentIntent(i, planVersion, constraintRevision))
-    .sort((a, b) => (a.recordedAt === b.recordedAt ? (a.memberId < b.memberId ? -1 : 1) : a.recordedAt < b.recordedAt ? -1 : 1));
-  const latest = matches[matches.length - 1];
+  let latest: Intent | undefined;
+  for (const intent of intents) {
+    if (intent.memberId === memberId && intent.planId === planId && isCurrentIntent(intent, planVersion, constraintRevision)
+      && (!latest || intent.recordedAt >= latest.recordedAt)) latest = intent;
+  }
   return latest ? { value: latest.value, source: latest.source, recordedAt: latest.recordedAt } : undefined;
 }
 
@@ -99,8 +104,12 @@ export function getCurrentIntent(
  */
 export function getPlanEvaluations(context: PlanningContext, deps: PlanningDeps): PlanEvaluation[] {
   const sortedMembers = [...context.members].sort(compareMemberId);
+  const lookup = createIntentLookup(context.intents ?? []);
+  // Availability/profile depend only on the member. Prepare them once per query, not once per candidate.
+  const prepared = sortedMembers.map(member => ({ member, profile: getMemberProfileStatus(member),
+    ranges: getMergedAvailability(member).map(range => ({ start: toDayNumber(range.start), end: toDayNumber(range.end) })) }));
   return context.plans
-    .map((plan) => evaluatePlan(plan, sortedMembers, context, deps))
+    .map((plan) => evaluatePlan(plan, sortedMembers, context, deps, lookup, prepared))
     .sort((a, b) => comparePlanEvaluation(a.sortKey, b.sortKey));
 }
 
@@ -109,9 +118,14 @@ function evaluatePlan(
   sortedMembers: readonly Member[],
   context: PlanningContext,
   deps: PlanningDeps,
+  lookup: ReturnType<typeof createIntentLookup>,
+  prepared: readonly { member: Member; profile: MemberPlanStatus['profile']; ranges: { start: number; end: number }[] }[],
 ): PlanEvaluation {
   const travelRange: Range = { start: plan.startDate, end: addDays(plan.startDate, plan.days - 1) };
-  const memberStatuses = sortedMembers.map((member) => evaluateMemberAgainstPlan(member, plan, deps));
+  const startDay = toDayNumber(plan.startDate);
+  const endDay = startDay + plan.days - 1;
+  const memberStatuses = prepared.map(({ member, profile, ranges }) => evaluatePreparedMember(member, plan, deps, profile,
+    ranges.length === 0 ? 'unknown' : ranges.some(range => range.start <= startDay && range.end >= endDay) ? 'pass' : 'conflict'));
 
   const conflictMembers = memberStatuses.filter((s) => s.overall === 'conflict').map((s) => s.memberId);
   const unknownMembers = memberStatuses.filter((s) => s.overall === 'unknown').map((s) => s.memberId);
@@ -126,7 +140,7 @@ function evaluatePlan(
   const destination = deps.resolveDestination(plan.templateVersion, plan.destinationId);
   const preferenceScore = computePreferenceScore(sortedMembers, destination?.tags ?? []);
 
-  const intents = summarizeIntents(context, plan);
+  const intents = summarizeIntents(context, plan, lookup);
 
   const allHardPass =
     memberStatuses.length > 0 &&
@@ -172,6 +186,7 @@ function evaluatePlan(
 function summarizeIntents(
   context: PlanningContext,
   plan: Plan,
+  lookup: ReturnType<typeof createIntentLookup>,
 ): PlanEvaluation['intents'] {
   const byMember: Record<Id, CurrentIntentView | undefined> = {};
   let approve = 0;
@@ -179,8 +194,7 @@ function summarizeIntents(
   let decline = 0;
   let pending = 0;
   for (const member of context.members) {
-    const view = getCurrentIntent(
-      context.intents ?? [],
+    const view = lookup(
       member.id,
       plan.id,
       plan.version,
@@ -286,4 +300,20 @@ export function evaluateInviteePlans(
       overall: status.overall,
     };
   });
+}
+
+/** Query-scoped index: no retained mutable cache, and no repeated history scans per member/plan. */
+export function createIntentLookup(intents: readonly Intent[], current?: { planId: Id; planVersion: number; constraintRevision: number }) {
+  const index = new Map<string, Intent>();
+  const key = (memberId: Id, planId: Id, planVersion: number, revision: number) => [memberId, planId, planVersion, revision].join('|');
+  for (const intent of intents) {
+    if (current && (intent.planId !== current.planId || !isCurrentIntent(intent, current.planVersion, current.constraintRevision))) continue;
+    const binding = key(intent.memberId, intent.planId, intent.planVersion, intent.constraintRevision);
+    const prior = index.get(binding);
+    if (!prior || intent.recordedAt >= prior.recordedAt) index.set(binding, intent);
+  }
+  return (memberId: Id, planId: Id, planVersion: number, revision: number): CurrentIntentView | undefined => {
+    const intent = index.get(key(memberId, planId, planVersion, revision));
+    return intent ? { value: intent.value, source: intent.source, recordedAt: intent.recordedAt } : undefined;
+  };
 }

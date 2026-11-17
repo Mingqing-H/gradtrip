@@ -23,7 +23,7 @@ export {
 import type { Trip } from '../types';
 import type { CommandContext, CommandPayload } from '../commands';
 import type { DomainDependencies } from '../../contracts/services';
-import type { BusinessError, Result } from '../../contracts/result';
+import { failure, type BusinessError, type Result } from '../../contracts/result';
 import { applyB0ItineraryLedgerCommand, type TemplateReplacementInput } from './b0Adapter';
 import { validateItineraryLedgerTrip as validateDomain } from './unifiedEntry';
 import { toBusinessError } from './errorMapping';
@@ -37,6 +37,7 @@ export function applyItineraryLedgerCommand(
 ): Result<Trip> {
   let templateInput: TemplateReplacementInput | undefined;
   if (payload.type === 'itinerary.replaceFromTemplate') {
+    if (!payload.confirmed) return failure('VALIDATION', '请先确认替换现有日程');
     templateInput = buildTemplateInputFromDependencies(payload.planId, trip, dependencies);
   }
   return applyB0ItineraryLedgerCommand(trip, payload, context, templateInput);
@@ -63,7 +64,7 @@ function buildTemplateInputFromDependencies(
     template: {
       destinationId: template.id,
       templateVersion: template.version,
-      seeds: template.activities.map((activity) => ({
+      seeds: template.activities.filter(activity => activity.dayOffset < plan.days).map((activity) => ({
         dayOffset: activity.dayOffset,
         startTime: activity.startTime,
         endTime: activity.endTime,

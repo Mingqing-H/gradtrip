@@ -5,7 +5,7 @@
 // - 派生状态只有 筹备中 / 已确认 / 待重新确认，按数据求值，不允许直接写入。
 
 import { compareDateOnly } from './calendar';
-import { evaluateMemberAgainstPlan, getCurrentIntent } from './evaluation';
+import { evaluateMemberAgainstPlan, getCurrentIntent, createIntentLookup } from './evaluation';
 import { getMissingProfileFields } from './profile';
 import type { DateOnly, Id, Intent, Member, Plan, Trip } from './contract';
 import type { ConfirmationBlocker, ConsensusStatus, PlanningContext, PlanningDeps } from './types';
@@ -28,6 +28,7 @@ export function getConfirmationBlockers(
     return [{ kind: 'date-invalid', message: '方案不存在或已被替换' }];
   }
   const blockers: ConfirmationBlocker[] = [];
+  const lookup = createIntentLookup(context.intents ?? [], { planId: plan.id, planVersion: plan.version, constraintRevision: context.constraintRevision });
   const members = [...context.members].sort((a, b) => (a.id < b.id ? -1 : 1));
 
   if (members.length < MIN_MEMBERS_TO_CONFIRM) {
@@ -40,8 +41,9 @@ export function getConfirmationBlockers(
   }
 
   for (const member of members) {
-    const missing = getMissingProfileFields(member);
-    if (missing.length > 0) {
+    const status = evaluateMemberAgainstPlan(member, plan, deps);
+    if (status.profile === 'incomplete') {
+      const missing = getMissingProfileFields(member);
       blockers.push({
         kind: 'member-incomplete',
         memberId: member.id,
@@ -50,7 +52,6 @@ export function getConfirmationBlockers(
       });
       continue;
     }
-    const status = evaluateMemberAgainstPlan(member, plan, deps);
     if (status.estimate === null) {
       blockers.push({
         kind: 'estimate-unknown',
@@ -72,8 +73,7 @@ export function getConfirmationBlockers(
   }
 
   for (const member of members) {
-    const intent = getCurrentIntent(
-      context.intents ?? [],
+    const intent = lookup(
       member.id,
       plan.id,
       plan.version,
@@ -128,9 +128,9 @@ export function getConsensusStatus(context: PlanningContext, deps: PlanningDeps)
   }
 
   // 版本一致时逐项复查当前意向与硬条件（意向变化不增加版本，但使确认立即失效）。
+  const lookup = createIntentLookup(context.intents ?? [], { planId: plan.id, planVersion: plan.version, constraintRevision: context.constraintRevision });
   const intentBlocked = context.members.some((member) => {
-    const intent = getCurrentIntent(
-      context.intents ?? [],
+    const intent = lookup(
       member.id,
       plan.id,
       plan.version,
