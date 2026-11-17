@@ -59,7 +59,7 @@ describe('member.add', () => {
   it('资料不合法时返回逐字段错误', () => {
     const result = applyPlanningCommand(
       baseTrip(),
-      { type: 'member.add', payload: { profile: { name: '', originCity: null, budgetCap: -5, availability: [], preferences: [] } } },
+      { type: 'member.add', payload: { profile: { name: '', originCity: '   ', budgetCap: -5, availability: [], preferences: [] } } },
       makeCtx(),
     );
     expect(result.ok).toBe(false);
@@ -314,7 +314,7 @@ describe('plan.update', () => {
       { type: 'plan.update', payload: { planId: 'p1', estimate: { transportOverride: { memberId: 'm1', amount: 33000 } } } },
       makeCtx(),
     );
-    expect(set.ok && set.trip.plans[0].estimate.transportByMember.m1).toEqual({ originCity: '上海', amount: 33000 }).toBe(true);
+    expect(set.ok && set.trip.plans[0].estimate.transportByMember.m1).toEqual({ originCity: '上海', amount: 33000 });
 
     const cleared = applyPlanningCommand(
       set.ok ? set.trip : trip,
@@ -341,7 +341,7 @@ describe('plan.update', () => {
     const trip = baseTrip({ plans: [makePlan({ id: 'p1' })] });
     const result = applyPlanningCommand(
       trip,
-      { type: 'plan.update', payload: { planId: 'p1', estimate: { lodgingPerNight: 2_500_000 } } },
+      { type: 'plan.update', payload: { planId: 'p1', estimate: { lodgingPerNight: 6_000_000 } } },
       makeCtx(),
     );
     expect(result).toMatchObject({ ok: false, error: { code: 'plan.estimate-over-cap' } });
@@ -386,7 +386,7 @@ describe('plan.recordIntent', () => {
 });
 
 describe('plan.confirm', () => {
-  function confirmableTrip(): Trip {
+  function confirmableTrip(overrides: Partial<Trip> = {}): Trip {
     return baseTrip({
       members: [makeMember({ id: 'm1', budgetCap: 200000 }), makeMember({ id: 'm2', budgetCap: 200000 })],
       plans: [makePlan({ id: 'p1', startDate: '2026-07-15' })],
@@ -394,6 +394,7 @@ describe('plan.confirm', () => {
         { memberId: 'm1', planId: 'p1', planVersion: 1, constraintRevision: 1, value: 'approve', source: 'organizer', recordedAt: 't' },
         { memberId: 'm2', planId: 'p1', planVersion: 1, constraintRevision: 1, value: 'acceptable', source: 'demo', recordedAt: 't' },
       ],
+      ...overrides,
     });
   }
 

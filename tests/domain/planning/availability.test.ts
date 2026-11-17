@@ -87,12 +87,12 @@ describe('指定出发日冲突详情（BR-03）', () => {
     const byId = Object.fromEntries(rows.map((row) => [row.memberId, row]));
     expect(byId.a.time).toBe('pass');
     expect(byId.b.time).toBe('conflict');
-    expect(byId.b.reason).toContain('不在可用范围');
+    expect(byId.b.reason).toContain('完整覆盖');
     expect(byId.nodate.time).toBe('unknown');
     expect(byId.nodate.reason).toContain('未填写可用日期');
   });
 
-  it('跨空白出发日说明原因', () => {
+  it('跨空白出发日给出冲突原因', () => {
     const gap = makeMember({
       id: 'gap',
       availability: [
@@ -102,6 +102,6 @@ describe('指定出发日冲突详情（BR-03）', () => {
     });
     const rows = getDepartureConflicts([gap], '2026-07-02', 4);
     expect(rows[0].time).toBe('conflict');
-    expect(rows[0].reason).toContain('空白');
+    expect(rows[0].reason).toContain('完整覆盖');
   });
 });

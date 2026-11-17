@@ -120,13 +120,13 @@ function evaluatePlan(
   const estimateRange = estimateRangeOf(totals);
   const estimateComplete = memberStatuses.length > 0 && unknownEstimateMembers.length === 0;
   const totalEstimate = estimateComplete
-    ? totals.reduce((sum, value) => sum + (value as Cents), 0)
+    ? totals.reduce<number>((sum, value) => sum + (value ?? 0), 0)
     : null;
 
   const destination = deps.resolveDestination(plan.templateVersion, plan.destinationId);
   const preferenceScore = computePreferenceScore(sortedMembers, destination?.tags ?? []);
 
-  const intents = summarizeIntents(context, plan, byId);
+  const intents = summarizeIntents(context, plan);
 
   const allHardPass =
     memberStatuses.length > 0 &&

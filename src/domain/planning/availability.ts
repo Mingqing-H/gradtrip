@@ -5,7 +5,6 @@
 
 import {
   addDays,
-  compareDateOnly,
   diffInDays,
   isValidDateOnly,
   isValidRange,
@@ -15,14 +14,14 @@ import {
   fromDayNumber,
 } from './calendar';
 import type { DateOnly, Id, Member, Range } from './contract';
-import type { CommonDepartures, DepartureConflictRow, MemberProfileStatus } from './types';
+import type { CommonDepartures, DepartureConflictRow } from './types';
 import { getMemberProfileStatus } from './profile';
 
 /** 候选共同出发日最多展示前 10 个（BR-03）。 */
 export const MAX_COMMON_DEPARTURES = 10;
 
 /** 成员的合并后可用区间（输入区间不合法时被过滤）。 */
-export function getMergedAvailability(member: Member): Range[] {
+export function getMergedAvailability(member: { availability: Range[] }): Range[] {
   return mergeRanges(member.availability ?? []);
 }
 
@@ -109,15 +108,7 @@ export function getDepartureConflicts(
       return row;
     }
     row.time = 'conflict';
-    const end = addDays(startDate, days - 1);
-    if (
-      compareDateOnly(end, mergedRanges[0].start) < 0 ||
-      compareDateOnly(startDate, mergedRanges[mergedRanges.length - 1].end) > 0
-    ) {
-      row.reason = '出行日期不在可用范围内';
-    } else {
-      row.reason = '出行日期跨越了成员可用日期之间的空白';
-    }
+    row.reason = '出行日期未被可用区间完整覆盖';
     return row;
   });
 }

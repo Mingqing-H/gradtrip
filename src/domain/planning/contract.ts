@@ -7,6 +7,8 @@
 // - Days / IntentSource / PlanEstimate / TransportOverride 来自 Plan、Intent 结构本身；
 // - MemberProfileInput 是规划域自己的表单输入类型，定义在 ./types.ts。
 
+import type { Id as IdT, Intent as IntentT, Plan as PlanT } from '../types';
+
 export type {
   Id,
   Cents,
@@ -20,8 +22,8 @@ export type {
   Trip,
 } from '../types';
 
-export type Days = Plan['days'];
-export type IntentSource = Intent['source'];
-export type PlanEstimate = Plan['estimate'];
+export type Days = PlanT['days'];
+export type IntentSource = IntentT['source'];
+export type PlanEstimate = PlanT['estimate'];
 /** 交通表项：手工覆盖值（null 表示回落查表，不代表零费用）。 */
-export type TransportOverride = Plan['estimate']['transportByMember'][Id];
+export type TransportOverride = PlanT['estimate']['transportByMember'][IdT];

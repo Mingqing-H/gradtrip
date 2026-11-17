@@ -20,7 +20,9 @@ export function makeMember(seed: MemberSeed = {}): Member {
   return {
     id: seed.id ?? 'm1',
     name: seed.name ?? '测试成员',
-    originCity: seed.originCity ?? '上海',
+    originCity: Object.prototype.hasOwnProperty.call(seed, 'originCity')
+      ? (seed.originCity as string | null)
+      : '上海',
     budgetCap: seed.budgetCap === undefined ? 150000 : seed.budgetCap,
     availability: seed.availability ?? [{ start: '2026-07-10', end: '2026-07-31' }],
     preferences: seed.preferences ?? [],
@@ -70,6 +72,12 @@ export interface TripSeed {
   itinerary?: Trip['itinerary'];
   expenses?: Trip['expenses'];
   settlements?: Trip['settlements'];
+  invitations?: Trip['invitations'];
+  appliedResponses?: Trip['appliedResponses'];
+  appliedCommandIds?: Trip['appliedCommandIds'];
+  isDemo?: boolean;
+  createdAt?: string;
+  updatedAt?: string;
 }
 
 export function makeTrip(seed: TripSeed = {}): Trip {

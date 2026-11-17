@@ -67,7 +67,8 @@ export function toDayNumber(date: DateOnly): number {
   const yoe = y - era * 400;
   const doy = Math.floor((153 * (month + (month > 2 ? -3 : 9)) + 2) / 5) + day - 1;
   const doe = yoe * 365 + Math.floor(yoe / 4) - Math.floor(yoe / 100) + doy;
-  return era * 146097 + doe;
+  // 减去 719468 使 1970-01-01 = 0，与 fromDayNumber 的 +719468 配对。
+  return era * 146097 + doe - 719468;
 }
 
 /** 天数编号 → 公历日期（toDayNumber 的逆运算）。 */
