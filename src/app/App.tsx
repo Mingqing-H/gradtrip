@@ -107,6 +107,7 @@ function Workbench({ runtime }: { runtime: Runtime }) {
           </Menu>
         </div>
       </header>
+      {trip ? <div className="mobile-save-status"><Status status={state.saveStatus}/></div> : null}
       {runtime.repository.mode === 'memory' ? <div className="banner" role="status">临时体验模式：此浏览器无法持久保存，刷新后内容会丢失。{trip ? <Button variant="ghost" onClick={() => void exportRaw()}>导出当前内容</Button> : null}</div> : null}
       {runtime.warnings.length || state.settingsWarning ? <div className="banner">{[...runtime.warnings, state.settingsWarning].filter(Boolean).join('；')}</div> : null}
       <main id="main" tabIndex={-1} className="content">
@@ -114,7 +115,7 @@ function Workbench({ runtime }: { runtime: Runtime }) {
         {state.saveStatus === 'conflict' && !state.error ? <ErrorNotice>其他标签页已更新。重新载入前请保留当前编辑内容。<div className="recovery-actions"><Button variant="secondary" onClick={() => void exportRaw()}>导出当前内容</Button><Button variant="secondary" onClick={state.reload}>重新载入</Button></div></ErrorNotice> : null}
         {state.loading ? <div aria-label="正在读取本地旅行" role="status"><div className="skeleton"/><div className="skeleton"/><div className="skeleton"/></div>
           : params.tripId && !trip ? <section className="empty-state"><h1>暂时无法打开此旅行</h1><p>请选择已有旅行，或导入备份恢复。</p><div className="toolbar"><Button onClick={() => setPanel({ type: 'import' })}>导入备份</Button>{currentRecord ? <Button variant="secondary" onClick={() => void exportRaw()}>导出原始内容</Button> : null}<Link to="/">返回旅行</Link></div></section>
-          : trip && props ? <div key={trip.id + ':' + state.reloadKey}>{trip.isDemo ? <p className="muted">示例旅行 · 成员与账目均为虚构</p> : null}{Page ? <Suspense fallback={<div role="status" className="skeleton" aria-label="正在加载工作区"/>}><Page {...props}/></Suspense> : <Unavailable title={navigation.find(n => n.path === workspace)!.label}/>}</div>
+          : trip && props ? <div key={trip.id + ':' + state.reloadKey}>{trip.isDemo ? <p className="demo-notice">示例旅行 · 成员与账目均为虚构</p> : null}{Page ? <Suspense fallback={<div role="status" className="skeleton" aria-label="正在加载工作区"/>}><Page {...props}/></Suspense> : <Unavailable title={navigation.find(n => n.path === workspace)!.label}/>}</div>
           : <section className="empty-state"><h1>出发，从一支小队开始</h1><div className="recovery-actions"><Button onClick={() => openDialog('create')}><Plus size={20}/>创建旅行</Button><Button variant="secondary" onClick={() => void state.create('', true).then(result => { if (result.ok) navigate('/trip/' + result.value.id + '/squad'); })}>体验示例</Button></div></section>}
       </main>
     </div>

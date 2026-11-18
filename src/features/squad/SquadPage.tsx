@@ -1,12 +1,15 @@
 // P01 小队工作区：成员列表、资料完整度、添加/编辑/删除、邀请与导入回调。
 import { useMemo, useState } from 'react';
-import { Plus, Pencil, Trash2, Send, Download } from 'lucide-react';
+import { Check, Plus, Pencil, Trash2, Send, Download } from 'lucide-react';
 import { Button, Dialog, Drawer, ErrorNotice } from '../../components/ui';
 import type { Id, WorkspaceProps } from '../../contracts/services';
 import { getMemberProfileStatus, getMissingProfileFields } from '../../domain/planning';
 import { formatMoney } from '../../domain/money';
 import { MemberEditor, draftFromMember, validateDraft, draftToMemberInput, findBlockingExpenses, type MemberDraft } from './MemberEditor';
 import styles from './squad.module.css';
+// Inline the URL in this route chunk so the first-screen image does not wait for a shared URL-only JS chunk.
+const squadLandscape = new URL('../../assets/destinations/suzhou-480.webp', import.meta.url).href;
+const squadLandscapeMobile = new URL('../../assets/destinations/suzhou-240.webp', import.meta.url).href;
 
 interface EditorState {
   memberId: Id | null; // null = 新增
@@ -72,16 +75,19 @@ export function SquadPage({ trip, execute, openInvite, openImport }: WorkspacePr
 
   return (
     <div className={styles.squadPage}>
-      <div className="page-heading">
-        <h1>小队 · {trip.members.length} 人</h1>
+      <header className={styles.overview}>
+        <div className={styles.overviewText}>
+          <h1>小队 <span className={styles.memberCount}>· {trip.members.length} 人</span></h1>
+          <span className={styles.completion}>{completeCount} 人资料完整</span>
+          <progress className={styles.progress} value={completeCount} max={Math.max(1, trip.members.length)} aria-label="成员资料完整度" />
+        </div>
+        <figure className={styles.landscape} data-asset-id="asset-dest-suzhou"><picture><source media="(max-width: 767px)" srcSet={squadLandscapeMobile}/><img src={squadLandscape} width={480} height={270} alt="苏州园林示意插画" decoding="async" fetchPriority="high"/></picture><figcaption>苏州 · 示意图</figcaption></figure>
+      </header>
+      <div className={styles.summary}>
         <Button onClick={openAdd} disabled={trip.members.length >= 20} aria-label="添加成员">
           <Plus size={20} /> 添加成员
         </Button>
-      </div>
-      <div className={styles.summary}>
-        <span>{completeCount} 人资料完整</span>
-        <span className={styles.grow} />
-        <Button variant="ghost" onClick={openImport}><Download size={16} /> 导入反馈</Button>
+        <Button variant="secondary" onClick={openImport}><Download size={20} /> 导入反馈</Button>
       </div>
       {submitError && !editor && !removingId ? <ErrorNotice>{submitError}</ErrorNotice> : null}
       {trip.members.length >= 20 ? <p className={styles.formHint}>已达每旅行 20 人上限，可继续编辑或导出。</p> : null}
@@ -97,17 +103,17 @@ export function SquadPage({ trip, execute, openInvite, openImport }: WorkspacePr
           <table className={styles.memberTable}>
             <thead><tr><th>成员</th><th>出发地</th><th>预算上限</th><th>可用日期</th><th>偏好</th><th>状态</th><th>操作</th></tr></thead>
             <tbody>
-              {trip.members.map((member) => {
+              {trip.members.map((member, index) => {
                 const status = getMemberProfileStatus(member);
                 const missing = getMissingProfileFields(member);
                 return (
                   <tr key={member.id}>
-                    <td><span className={styles.memberName}>{member.name}</span></td>
+                    <td><span className={styles.memberIdentity}><span className={styles.avatar} data-tone={index % 4} aria-hidden="true">{member.name.slice(0, 1)}</span><span className={styles.memberName}>{member.name}</span></span></td>
                     <td>{member.originCity ?? <span className="muted">待补充</span>}</td>
                     <td>{member.budgetCap === null ? <span className="muted">待补充</span> : formatMoney(member.budgetCap)}</td>
                     <td>{member.availability.length > 0 ? `${member.availability[0].start} 起${member.availability.length > 1 ? ` · 另 ${member.availability.length - 1} 段` : ''}` : <span className="muted">待补充</span>}</td>
                     <td>{member.preferences.length ? member.preferences.join('、') : <span className="muted">无</span>}</td>
-                    <td><span className={`${styles.badge} ${status === 'complete' ? styles.badgeComplete : styles.badgeIncomplete}`}>{status === 'complete' ? '资料完整' : `待补 ${missing.join('、')}`}</span></td>
+                    <td><span className={`${styles.badge} ${status === 'complete' ? styles.badgeComplete : styles.badgeIncomplete}`}>{status === 'complete' ? <><Check size={14} aria-hidden="true"/>资料完整</> : `待补 ${missing.join('、')}`}</span></td>
                     <td>
                       <div className={styles.rowActions}>
                         <button className={styles.linkButton} onClick={() => openEdit(member.id)} aria-label={"编辑 " + member.name}>编辑</button>
@@ -121,19 +127,20 @@ export function SquadPage({ trip, execute, openInvite, openImport }: WorkspacePr
             </tbody>
           </table>
           <div className={styles.cardList}>
-            {trip.members.map((member) => {
+            {trip.members.map((member, index) => {
               const status = getMemberProfileStatus(member);
               return (
                 <div className={styles.memberCard} key={member.id}>
                   <div className={styles.memberCardHead}>
-                    <strong>{member.name}</strong>
+                    <span className={styles.memberIdentity}><span className={styles.avatar} data-tone={index % 4} aria-hidden="true">{member.name.slice(0, 1)}</span><strong>{member.name}</strong></span>
                     <button className={styles.linkButton} onClick={() => openEdit(member.id)} aria-label={"编辑 " + member.name}><Pencil size={16} /> 编辑</button>
                   </div>
                   <div className={styles.memberCardFields}>
                     <span>出发地：{member.originCity ?? '待补充'}</span>
                     <span>预算：{member.budgetCap === null ? '待补充' : formatMoney(member.budgetCap)}</span>
                     <span>日期：{member.availability.length ? `${member.availability[0].start} 起` : '待补充'}</span>
-                    <span>{status === 'complete' ? '资料完整' : '资料待补充'}</span>
+                    <span className={status === 'complete' ? styles.badgeComplete : styles.badgeIncomplete}>{status === 'complete' ? '资料完整' : '资料待补充'}</span>
+                    {member.preferences.length ? <span className={styles.memberPreferences}>{member.preferences.join(' · ')}</span> : null}
                   </div>
                   <div className={styles.memberCardActions}>
                     <Button variant="secondary" onClick={() => openInvite(member.id)} aria-label={"邀请 " + member.name + " 填写"}><Send size={16} /> 邀请</Button>

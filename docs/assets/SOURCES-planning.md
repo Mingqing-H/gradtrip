@@ -24,6 +24,12 @@
 
 源大图 `source-*.png` 仅作处理输入，不打包进 Pages 产物；浏览器仅加载 WebP 变体。卡片使用 480px，详情使用 960px，通过 `srcset`/`sizes` 选择；图片加载失败时以固定 16:9 纯色底和目的地名称降级，不影响方案阅读与操作。
 
+## 小队横幅复用（2026-11-18）
+
+- 复用 `asset-dest-suzhou`，保持“苏州 · 示意图”标记；不代表旅行已选择苏州。
+- 新增 `asset-squad-suzhou-240`：`src/assets/destinations/suzhou-240.webp`，由现有 `suzhou-480.webp` 使用 Pillow 12.1.1、LANCZOS 缩放至 240×135、WebP quality=72 / method=6，7492 bytes。仅优化编码和尺寸，不改变插画内容。
+- 手机通过 `<picture>` 选择 240 px 变体；桌面复用 480 px 变体。URL 在小队路由内静态解析，避免首屏图片额外等待仅导出 URL 的共享 JS 块。图片加载失败仍可使用全部成员操作。
+
 ## 图标
 
 功能图标使用 B0 统一引入的 `lucide-react`（具名静态导入），本任务不新增图标库，也不复制图标资源。许可随 B0 的第三方声明统一交付。

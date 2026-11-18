@@ -1,8 +1,8 @@
 import { localDateOnly, isDateOnly } from '../../domain/dates';
 // P02 方案工作区：筛选、候选比较、方案详情（成员适配/估算/意向/确认）。
 // 所有业务查询通过 services.planning，所有写入通过 execute（扁平 CommandPayload）。
-import { useMemo, useState } from 'react';
-import { Search, ChevronRight } from 'lucide-react';
+import { useId, useMemo, useRef, useState } from 'react';
+import { CalendarDays, Search, ChevronDown, ChevronRight } from 'lucide-react';
 import { Button, Drawer, ErrorNotice, Input, Select } from '../../components/ui';
 import type { Id, WorkspaceProps } from '../../contracts/services';
 import type { IntentValue, Plan } from '../../domain/types';
@@ -21,6 +21,9 @@ interface EstimateDraft {
 }
 
 export function PlansPage({ trip, execute, services, openShare }: WorkspaceProps) {
+  const filterId = useId();
+  const filterToggleRef = useRef<HTMLButtonElement>(null);
+  const [filtersOpen, setFiltersOpen] = useState(trip.plans.length === 0);
   const [windowStart, setWindowStart] = useState(trip.searchWindow.start);
   const [windowEnd, setWindowEnd] = useState(trip.searchWindow.end);
   const [duration, setDuration] = useState<string>(String(trip.duration));
@@ -98,6 +101,8 @@ export function PlansPage({ trip, execute, services, openShare }: WorkspaceProps
     setBusy(false);
     if (!result.ok) { setSubmitError(result.error.message); return; }
     setSelectedPlanId(null);
+    setFiltersOpen(false);
+    filterToggleRef.current?.focus();
   };
 
   const recordIntent = async (memberId: Id, value: IntentValue) => {
@@ -181,7 +186,10 @@ export function PlansPage({ trip, execute, services, openShare }: WorkspaceProps
         <h1>方案 <span className={`${styles.statusChip} ${statusClass}`}>{statusText}</span></h1>
         <Button variant="secondary" onClick={() => openShare(trip.confirmation?.planId ?? trip.plans[0].id)} disabled={trip.plans.length === 0}>分享方案</Button>
       </div>
-      <div className={styles.filters}>
+      <button ref={filterToggleRef} className={styles.filterToggle} aria-expanded={filtersOpen} aria-controls={filterId} onClick={() => setFiltersOpen(open => !open)}>
+        <span><CalendarDays size={20}/>{departure || commonDates[0] || '选择日期'} · {duration} 天</span><span>{filtersOpen ? '收起' : '调整日期'}<ChevronDown size={16}/></span>
+      </button>
+      <div className={styles.filters} id={filterId} data-expanded={filtersOpen}>
         <Input label="窗口起日" type="date" value={windowStart} onChange={(e) => setWindowStart(e.target.value)} />
         <Input label="窗口止日" type="date" value={windowEnd} onChange={(e) => setWindowEnd(e.target.value)} />
         <Select label="出行时长" value={duration} onChange={(e) => setDuration(e.target.value)}>
@@ -192,7 +200,7 @@ export function PlansPage({ trip, execute, services, openShare }: WorkspaceProps
           {commonDates.map((date) => <option key={date} value={date}>{date}</option>)}
         </Select>
         <div className={styles.filterActions}>
-          <Button onClick={generatePlans} disabled={busy || trip.members.length === 0}><Search size={18} /> 生成方案</Button>
+          <Button onClick={generatePlans} disabled={busy || trip.members.length === 0} aria-busy={busy}><Search size={20} /> {busy ? '生成中…' : '生成方案'}</Button>
         </div>
       </div>
       {trip.members.length === 0 ? (
@@ -203,7 +211,7 @@ export function PlansPage({ trip, execute, services, openShare }: WorkspaceProps
         </div>
       ) : null}
       {submitError ? <ErrorNotice>{submitError}</ErrorNotice> : null}
-      <p className={styles.destNote}>内置估算，非实时报价 · 选择日期与时长后生成候选</p>
+      <p className={styles.destNote}>内置估算，非实时报价</p>
 
       <div className={styles.cards}>
         {sortedPlans.map((plan) => {
@@ -217,7 +225,7 @@ export function PlansPage({ trip, execute, services, openShare }: WorkspaceProps
           const max = evalItem?.maxEstimate ?? null;
           return (
             <article className={styles.planCard} key={plan.id}>
-              {asset ? <img className={styles.cardImage} src={asset.card} alt={asset.alt} loading="lazy" decoding="async" /> : null}
+              {asset ? <img className={styles.cardImage} src={asset.card} alt={asset.alt} width={480} height={270} loading="lazy" decoding="async" /> : null}
               <div className={styles.cardBody}>
                 <div className={styles.cardTitle}><h2>{template?.name ?? plan.destinationId}</h2><span className={styles.cardMeta}>{plan.days} 天 {plan.days - 1} 晚</span></div>
                 <span className={styles.cardMeta}>{plan.startDate} 出发 · {asset?.illustrative ? '示意图' : ''}</span>

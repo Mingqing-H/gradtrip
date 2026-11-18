@@ -1,5 +1,5 @@
 import { useEffect, useId, useRef, type ButtonHTMLAttributes, type InputHTMLAttributes, type ReactNode, type Ref, type RefObject, type SelectHTMLAttributes } from 'react';
-import { X } from 'lucide-react';
+import { CheckCircle2, ChevronDown, CircleAlert, LoaderCircle, X } from 'lucide-react';
 import type { SaveStatus } from '../../contracts/services';
 export function Button({ variant = 'primary', className = '', ...props }: ButtonHTMLAttributes<HTMLButtonElement> & { variant?: 'primary' | 'secondary' | 'danger' | 'ghost' }) {
   return <button type="button" className={`button button-${variant} ${className}`} {...props} />;
@@ -39,8 +39,18 @@ export function Dialog(props: DialogProps) { return <Modal {...props}/>; }
 export function Drawer(props: DialogProps) { return <Modal {...props} drawer/>; }
 export function Menu({ label, children }: { label: string; children: ReactNode }) {
   const ref = useRef<HTMLDetailsElement>(null);
-  return <details className="menu" ref={ref} onKeyDown={event => { if (event.key === 'Escape' && ref.current) { ref.current.open = false; ref.current.querySelector('summary')?.focus(); } }}><summary>{label}</summary><div className="menu-items" onClick={() => { if (ref.current) ref.current.open = false; }}>{children}</div></details>;
+  useEffect(() => {
+    const closeOutside = (event: PointerEvent) => {
+      if (ref.current?.open && event.target instanceof Node && !ref.current.contains(event.target)) ref.current.open = false;
+    };
+    document.addEventListener('pointerdown', closeOutside);
+    return () => document.removeEventListener('pointerdown', closeOutside);
+  }, []);
+  return <details className="menu" ref={ref} onKeyDown={event => { if (event.key === 'Escape' && ref.current) { ref.current.open = false; ref.current.querySelector('summary')?.focus(); } }}><summary>{label}<ChevronDown size={16} aria-hidden="true"/></summary><div className="menu-items" onClick={() => { if (ref.current) ref.current.open = false; }}>{children}</div></details>;
 }
 const statuses: Record<SaveStatus, string> = { saved: '已保存到此设备', saving: '正在保存…', unsaved: '尚未保存', conflict: '其他标签页已更新', memoryOnly: '临时体验 · 刷新后丢失' };
-export function Status({ status }: { status: SaveStatus }) { return <span role="status" aria-label="保存状态" className={`save-status status-${status}`}>{statuses[status]}</span>; }
+export function Status({ status }: { status: SaveStatus }) {
+  const Icon = status === 'saved' ? CheckCircle2 : status === 'saving' ? LoaderCircle : CircleAlert;
+  return <span role="status" aria-label="保存状态" className={`save-status status-${status}`}><Icon size={16} aria-hidden="true"/>{statuses[status]}</span>;
+}
 export function ErrorNotice({ children }: { children: ReactNode }) { return <div role="alert" className="error-notice">{children}</div>; }

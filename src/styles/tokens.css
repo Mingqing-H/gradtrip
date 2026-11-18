@@ -1,9 +1,11 @@
 :root {
-  font-family: Manrope, system-ui, 'Microsoft YaHei', sans-serif;
-  color: #18212f; background: #f7f8fa; font-synthesis: none;
-  --color-bg: #f7f8fa; --color-surface: #fff; --color-text: #18212f; --color-muted: #586575;
-  --color-primary: #2457d6; --color-primary-soft: #edf2ff; --color-border: #e1e6ed;
-  --color-success: #16704a; --color-warning: #925000; --color-danger: #b42318;
+  font-family: Manrope, 'PingFang SC', 'Microsoft YaHei', system-ui, sans-serif;
+  color: #20342f; background: #f8f9f5; font-synthesis: none;
+  --font-heading: 'Noto Serif SC', 'Source Han Serif SC', 'Songti SC', 'STSong', 'SimSun', serif;
+  --color-bg: #f8f9f5; --color-surface: #fff; --color-text: #20342f; --color-muted: #62716b;
+  --color-primary: #18594c; --color-primary-hover: #104638; --color-primary-soft: #eaf0e9; --color-border: #dce3dc;
+  --color-success: #23634d; --color-warning: #895414; --color-danger: #b33e32;
+  --color-sidebar: #164f44; --color-sage: #e5ecdf;
   --space-1: 4px; --space-2: 8px; --space-3: 12px; --space-4: 16px; --space-6: 24px; --space-8: 32px; --space-10: 40px; --space-12: 48px; --space-16: 64px;
-  --radius-control: 8px; --radius-card: 16px; --motion-curve: cubic-bezier(.22,1,.36,1);
+  --radius-control: 6px; --radius-card: 8px; --motion-curve: cubic-bezier(.22,1,.36,1);
 }

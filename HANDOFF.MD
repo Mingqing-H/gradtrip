@@ -1,5 +1,33 @@
 # 实际踩坑记录
 
+## UI：CSS Modules 内引用全局基础组件类名
+
+- 现象：筛选区写了 `.filters .field`，控件仍保留基础组件的下边距，操作按钮与输入框不齐。
+- 原因：`.field` 被 CSS Modules 转为局部类，而基础组件实际输出全局 `field`；账本内的 `.button` 也有同类问题。
+- 处理：组合选择器明确使用 `:global(.field)` / `:global(.button)`，将筛选区改为等底线的网格。
+- 避免：跨模块修饰基础组件时检查实际类名与 computed styles，不以源码选择器存在作为生效证据。
+
+## UI：首屏小配图也可能增加关键请求链
+
+- 现象：新增苏州横幅后，4 倍 CPU、1.6 Mbps 下 LCP 中位数升至 2520 ms，超过 2500 ms 门槛。
+- 原因：手机小图仍下载 480 px 版本，且共享静态图片导入被构建成仅导出 URL 的额外 JS 块。
+- 处理：手机使用 7492 bytes 的 240 px WebP；路由内用可静态分析的 `new URL(..., import.meta.url)` 解析资源，消除 URL 块的等待；明确图片尺寸和请求优先级。
+- 避免：为首屏新增图片后复测真实生产构建，不只检查图片大小和 gzip；检查 manifest 的共享资源块与网络请求链。
+
+## UI：重建 dist 后旧预览标签页仍引用旧懒加载块
+
+- 现象：保持生产预览标签页打开，重新 build 后切换尚未加载的工作区，进入“页面暂时无法显示”。
+- 原因：构建清理了旧哈希文件，标签页内的入口模块仍请求旧 chunk。
+- 处理：重新载入标签页以读取新入口；本地数据保留。最终回归使用构建完成后新建的隔离上下文。
+- 避免：验收期间固定构建，不在回归测试途中更新 dist；重建后先刷新全部预览标签页。
+
+## UI：Windows PowerShell 的 UTF-8 写入会带 BOM
+
+- 现象：新写 CSS 文件的首行肉眼一致，后续补丁却无法匹配首行。
+- 原因：Windows PowerShell `Set-Content -Encoding utf8` 添加 BOM。
+- 处理：使用 `UTF8Encoding(false)` 写回无 BOM、LF 文本。
+- 避免：优先使用补丁；脚本生成源文件时明确 UTF-8 无 BOM，不依赖 shell 的编码默认值。
+
 ## Markdown 换行被 Git 误报为空白错误
 
 - 现象：首次提交前，`git diff --cached --check` 将文档元信息行末的两个空格报告为 trailing whitespace。

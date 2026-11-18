@@ -4,7 +4,7 @@
  * 页面只调用 execute 与领域查询，不自行实现分摊/余额/建议算法。
  */
 import { useMemo, useState } from 'react';
-import { ArrowRight, Plus, Receipt, RotateCcw, ShieldAlert } from 'lucide-react';
+import { ArrowRight, ChevronDown, Plus, Receipt, RotateCcw, ShieldAlert } from 'lucide-react';
 import { Button, Dialog, ErrorNotice, Input, Select } from '../../components/ui';
 import { formatMoney, parseMoney } from '../../domain/money';
 import { getLedgerSummary } from '../../domain/ledger/balances';
@@ -318,7 +318,7 @@ export function LedgerPage({ trip, execute }: WorkspaceProps) {
 
       {tab === 'expenses' && (
         <>
-          <p className="muted">实际支出 {formatMoney(summary.totalExpense)} · {summary.expenseCount} 笔</p>
+          <div className={styles.total}><span>实际支出 </span><strong>{formatMoney(summary.totalExpense)}</strong><small> · {summary.expenseCount} 笔</small></div>
           {summary.hasActiveSettlement && (
             <ErrorNotice>
               <ShieldAlert size={18} /> 已有有效结算记录，费用修改已锁定。请先到“结算”撤销全部结算记录再更正。
@@ -339,7 +339,7 @@ export function LedgerPage({ trip, execute }: WorkspaceProps) {
                     <span className={styles.expenseTitle}>
                       <Receipt size={18} /> {expense.title}
                     </span>
-                    <span className={styles.expenseAmount}>{formatMoney(expense.amount)}</span>
+                    <span className={styles.expenseAmount}>{formatMoney(expense.amount)}<ChevronDown className={styles.expenseChevron} size={16} aria-hidden="true"/></span>
                     <span className={styles.expenseMeta}>
                       {expense.date} · {expense.category} · {nameOf(expense.payerId)} 垫付
                     </span>
