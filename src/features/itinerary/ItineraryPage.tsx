@@ -4,17 +4,18 @@
  * 页面只调用 execute / services，不操作存储、不复制业务算法；
  * 所有余额/预算/排序/重叠均由领域选择器计算。
  */
-import { useMemo, useState } from 'react';
+import { useMemo, useState, useRef } from 'react';
 import {
   CalendarPlus,
   ChevronDown,
   ChevronUp,
   Clock3,
+  Bus, BedDouble, UtensilsCrossed, Camera, MapPin,
   Pencil,
   Plus,
   Trash2,
 } from 'lucide-react';
-import { Button, Dialog, ErrorNotice, Input, Menu, Select } from '../../components/ui';
+import { Button, Dialog, Drawer, ErrorNotice, Input, ActionMenu, Select, PageHeader, StatusChip } from '../../components/ui';
 import { formatMoney, parseMoney } from '../../domain/money';
 import { addDays } from '../../domain/dates';
 import {
@@ -37,6 +38,7 @@ type ActivityForm = {
   note: string;
 };
 
+const categoryIcons: Record<string, typeof Bus> = { '交通': Bus, '住宿': BedDouble, '餐饮': UtensilsCrossed, '活动': Camera };
 const CATEGORIES = ['交通', '住宿', '餐饮', '活动', '其他'];
 
 function emptyForm(date: string, bucket: Activity['budgetBucket'] = 'activities'): ActivityForm {
@@ -73,6 +75,8 @@ function parseMoneyCents(text: string): number | null {
 
 export function ItineraryPage({ trip, execute, services }: WorkspaceProps) {
   const { activities, dateRange } = trip.itinerary;
+  const dayRefs = useRef<Record<string, HTMLElement | null>>({});
+  const [budgetOpen, setBudgetOpen] = useState(false);
   const [editing, setEditing] = useState<{ id: string | null } | null>(null);
   const [form, setForm] = useState<ActivityForm>(emptyForm(dateRange?.start ?? ''));
   const [draftRange, setDraftRange] = useState({ start: trip.searchWindow.start, end: addDays(trip.searchWindow.start, trip.duration - 1) });
@@ -107,6 +111,8 @@ export function ItineraryPage({ trip, execute, services }: WorkspaceProps) {
       }),
     [activities, plan?.estimate.activities, trip.members, baseEstimates],
   );
+
+  const budgetExpanded = budgetOpen;
 
   const openCreate = (date: string) => {
     setForm(emptyForm(date));
@@ -182,17 +188,8 @@ export function ItineraryPage({ trip, execute, services }: WorkspaceProps) {
 
   return (
     <section className={styles.page}>
-      <header className={styles.heading}>
-        <div>
-          <h1>日程</h1>
-          <p className="muted">
-            {dateRange ? `${dateRange.start} 至 ${dateRange.end} · ${groups.length} 天` : '尚未绑定日期范围'}
-          </p>
-        </div>
-        <Button onClick={() => openCreate(dateRange?.start ?? trip.searchWindow.start)} disabled={busy}>
-          <CalendarPlus size={20} /> 添加安排
-        </Button>
-      </header>
+      <PageHeader title="日程" subtitle={dateRange ? dateRange.start + ' 至 ' + dateRange.end + ' · ' + groups.length + ' 天' : '尚未绑定日期范围'} actions={<Button className="mobile-primary" onClick={() => openCreate(dateRange?.start ?? trip.searchWindow.start)} disabled={busy}><CalendarPlus size={20}/>添加安排</Button>}/>
+      {groups.length > 0 && <nav className={styles.dayNav} aria-label="日程日期">{groups.map((group, index) => <button key={group.date} onClick={() => dayRefs.current[group.date]?.scrollIntoView({ block: 'start' })}>第 {index + 1} 天 <span>{group.date.slice(5)}</span></button>)}</nav>}
       {error !== null && <ErrorNotice>{error}</ErrorNotice>}
       {outOfRange.length > 0 && (
         <ErrorNotice>
@@ -211,15 +208,13 @@ export function ItineraryPage({ trip, execute, services }: WorkspaceProps) {
             <div className="empty-state">
               <h2>还没有日程安排</h2>
               <p className="muted">添加第一项安排；未确认方案也可以先建立草稿日程。</p>
-              <Button onClick={() => openCreate(trip.searchWindow.start)}>
-                <Plus size={20} /> 添加安排
-              </Button>
+
             </div>
           )}
-          {groups.map((group) => (
-            <section key={group.date} className={styles.day}>
+          {groups.map((group, dayIndex) => (
+            <section key={group.date} ref={element => { dayRefs.current[group.date] = element; }} className={styles.day}>
               <header className={styles.dayHeading}>
-                <h2>{group.date}</h2>
+                <h2><span>第 {dayIndex + 1} 天</span> {group.date}</h2>
                 <Button variant="ghost" onClick={() => openCreate(group.date)}>
                   <Plus size={18} /> 添加
                 </Button>
@@ -228,7 +223,7 @@ export function ItineraryPage({ trip, execute, services }: WorkspaceProps) {
                 <p className={`muted ${styles.emptyDay}`}>添加这天的安排</p>
               )}
               <ul className={styles.list}>
-                {group.activities.map((activity) => (
+                {group.activities.map((activity) => { const CategoryIcon = categoryIcons[activity.category] ?? MapPin; return (
                   <li
                     key={activity.id}
                     className={`${styles.item} ${overlapIds.has(activity.id) ? styles.overlap : ''} ${
@@ -241,7 +236,7 @@ export function ItineraryPage({ trip, execute, services }: WorkspaceProps) {
                         : `${activity.startTime}–${activity.endTime}`}
                     </div>
                     <div className={styles.itemBody}>
-                      <strong>{activity.title}</strong>
+                      <span className={styles.categoryIcon} data-category={activity.category}><CategoryIcon size={18} aria-hidden="true"/></span><strong>{activity.title}</strong>
                       <span className={styles.meta}>
                         {activity.category} ·{' '}
                         {activity.budgetBucket === 'included'
@@ -250,9 +245,11 @@ export function ItineraryPage({ trip, execute, services }: WorkspaceProps) {
                             ? '人均待估算'
                             : `¥${(activity.perPersonEstimate / 100).toFixed(2)} / 人`}
                       </span>
+                      {overlapIds.has(activity.id) && <StatusChip tone="warning">时间重叠</StatusChip>}
+                      {outOfRange.some(item => item.id === activity.id) && <StatusChip tone="danger">超出行程日期</StatusChip>}
                       {activity.note !== '' && <span className={styles.note}>{activity.note}</span>}
                     </div>
-                    <Menu label="操作">
+                    <ActionMenu>
                       <Button variant="ghost" onClick={() => openEdit(activity)}>
                         <Pencil size={18} /> 编辑
                       </Button>
@@ -274,19 +271,19 @@ export function ItineraryPage({ trip, execute, services }: WorkspaceProps) {
                       >
                         <Trash2 size={18} /> 删除
                       </Button>
-                    </Menu>
+                    </ActionMenu>
                   </li>
-                ))}
+                ); })}
               </ul>
             </section>
           ))}
         </div>
 
-        <aside className={styles.summary} aria-label="日程预算摘要">
+        <aside className={styles.summary} aria-label="日程预算摘要" data-expanded={budgetExpanded}><button className={styles.budgetToggle} aria-expanded={budgetExpanded} onClick={() => setBudgetOpen(!budgetOpen)}>日程预算 · {formatMoney(budget.knownActivitiesTotal)} 已知活动<ChevronDown size={16}/></button><div className={styles.budgetDetail}>
           <h2>预算摘要</h2>
           {budget.perMember.some(row => row.baseEstimate !== null) ? <dl>{budget.perMember.filter(row => row.baseEstimate !== null).map(row => <div key={row.memberId}><dt>{trip.members.find(member => member.id === row.memberId)?.name}</dt><dd>方案 {formatMoney(row.baseEstimate!)} → {budget.complete ? '修订' : '已知部分'} {formatMoney(row.revisedEstimate!)}（差额 {formatMoney(row.revisedEstimate! - row.baseEstimate!)}）</dd></div>)}</dl> : null}
           {plan ? <Button variant="secondary" onClick={() => setReplacing(true)}>重新使用方案日程</Button> : null}
-          <p className="muted">方案原活动分项 {formatMoney(budget.planActivitiesEstimate)}</p>
+          <p className="muted">{plan ? '方案原活动分项 ' + formatMoney(budget.planActivitiesEstimate) : '方案活动基准待确认'}</p>
           <p className="muted">当前已知活动合计 {formatMoney(budget.knownActivitiesTotal)}</p>
           {budget.unknownActivityCount > 0 && (
             <p className={styles.warn}>还有 {budget.unknownActivityCount} 项待估算</p>
@@ -297,6 +294,9 @@ export function ItineraryPage({ trip, execute, services }: WorkspaceProps) {
           {!budget.complete && (
             <p className="muted">还有未估算的费用，当前显示已知部分。</p>
           )}
+
+
+        </div>
           {budget.perMember.some((row) => row.overBudget === true) && (
             <div className={styles.warn}>
               日程调整后超出成员预算，尚未重新征求意向。
@@ -312,14 +312,13 @@ export function ItineraryPage({ trip, execute, services }: WorkspaceProps) {
               </ul>
             </div>
           )}
-
         </aside>
       </div>
 
       <Dialog open={replacing} title="替换现有日程？" onClose={() => setReplacing(false)} footer={<Button variant="danger" disabled={busy} onClick={() => { if (!plan) return; setBusy(true); void execute({ type: 'itinerary.replaceFromTemplate', planId: plan.id, confirmed: true }).then(result => { setBusy(false); if (result.ok) setReplacing(false); else setError(result.error.message); }); }}>确认替换日程</Button>}>
         <p>将覆盖 {activities.length} 项安排，手工修改会被替换。账本不受影响。</p>{error ? <ErrorNotice>{error}</ErrorNotice> : null}
       </Dialog>
-      <Dialog
+      <Drawer
         open={editing !== null}
         title={editing?.id ? '编辑安排' : '添加安排'}
         onClose={() => setEditing(null)}
@@ -414,7 +413,7 @@ export function ItineraryPage({ trip, execute, services }: WorkspaceProps) {
         <p className="muted">
           <Clock3 size={16} /> 起止时间需同时填写，结束晚于开始；跨午夜请拆成两条。时间重叠仅提示，不阻止保存。
         </p>
-      </Dialog>
+      </Drawer>
     </section>
   );
 }

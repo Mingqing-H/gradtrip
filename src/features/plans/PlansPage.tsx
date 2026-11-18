@@ -1,9 +1,11 @@
+import { createIntentLookup } from '../../domain/planning/evaluation';
+import { Link } from 'react-router-dom';
 import { localDateOnly, isDateOnly } from '../../domain/dates';
 // P02 方案工作区：筛选、候选比较、方案详情（成员适配/估算/意向/确认）。
 // 所有业务查询通过 services.planning，所有写入通过 execute（扁平 CommandPayload）。
 import { useId, useMemo, useRef, useState } from 'react';
-import { CalendarDays, Search, ChevronDown, ChevronRight } from 'lucide-react';
-import { Button, Drawer, ErrorNotice, Input, Select } from '../../components/ui';
+import { Check, Minus, TriangleAlert, CalendarDays, Search, ChevronDown, ChevronRight } from 'lucide-react';
+import { Button, Drawer, ErrorNotice, Input, Select, PageHeader, StatusChip, Avatar, SegmentedControl } from '../../components/ui';
 import type { Id, WorkspaceProps } from '../../contracts/services';
 import type { IntentValue, Plan } from '../../domain/types';
 import { formatMoney, parseMoney } from '../../domain/money';
@@ -32,9 +34,11 @@ export function PlansPage({ trip, execute, services, openShare }: WorkspaceProps
   const [submitError, setSubmitError] = useState('');
   const [busy, setBusy] = useState(false);
   const [intentMember, setIntentMember] = useState<Id | null>(null);
+  const [templateOpen, setTemplateOpen] = useState(false);
   const [editingEstimate, setEditingEstimate] = useState(false);
   const [estimateDraft, setEstimateDraft] = useState<EstimateDraft | null>(null);
 
+  const intentLookup = useMemo(() => createIntentLookup(trip.intents), [trip.intents]);
   const evaluations = useMemo(
     () => services.planning.getPlanEvaluations(trip),
     [services.planning, trip],
@@ -178,23 +182,18 @@ export function PlansPage({ trip, execute, services, openShare }: WorkspaceProps
   };
 
   const statusText = statusKind === 'confirmed' ? '已确认' : statusKind === 'needsReconfirm' ? '待重新确认' : '筹备中';
-  const statusClass = statusKind === 'confirmed' ? styles.confirmed : statusKind === 'needsReconfirm' ? styles.stale : '';
+
 
   return (
     <div className={styles.plansPage}>
-      <div className="page-heading">
-        <h1>方案 <span className={`${styles.statusChip} ${statusClass}`}>{statusText}</span></h1>
-        <Button variant="secondary" onClick={() => openShare(trip.confirmation?.planId ?? trip.plans[0].id)} disabled={trip.plans.length === 0}>分享方案</Button>
-      </div>
+      <PageHeader title={<>方案 <StatusChip tone={statusKind === 'confirmed' ? 'success' : 'warning'}>{statusText}</StatusChip></>} subtitle={sortedPlans.length + ' 个候选，其中 ' + evaluations.filter(e => e.feasible).length + ' 个全员可行'} actions={<Button variant="secondary" onClick={() => openShare(trip.confirmation?.planId ?? trip.plans[0]?.id)} disabled={trip.plans.length === 0}>分享方案</Button>}/>
       <button ref={filterToggleRef} className={styles.filterToggle} aria-expanded={filtersOpen} aria-controls={filterId} onClick={() => setFiltersOpen(open => !open)}>
         <span><CalendarDays size={20}/>{departure || commonDates[0] || '选择日期'} · {duration} 天</span><span>{filtersOpen ? '收起' : '调整日期'}<ChevronDown size={16}/></span>
       </button>
       <div className={styles.filters} id={filterId} data-expanded={filtersOpen}>
         <Input label="窗口起日" type="date" value={windowStart} onChange={(e) => setWindowStart(e.target.value)} />
         <Input label="窗口止日" type="date" value={windowEnd} onChange={(e) => setWindowEnd(e.target.value)} />
-        <Select label="出行时长" value={duration} onChange={(e) => setDuration(e.target.value)}>
-          {[2, 3, 4, 5].map((d) => <option key={d} value={d}>{d} 天 {d - 1} 晚</option>)}
-        </Select>
+        <SegmentedControl label="出行时长" value={duration} options={[2, 3, 4, 5].map(d => ({ value: String(d), label: d + '天' }))} onChange={setDuration}/>
         <Select label="出发日期" value={departure} onChange={(e) => setDeparture(e.target.value)}>
           <option value="">自动（共同日期）</option>
           {commonDates.map((date) => <option key={date} value={date}>{date}</option>)}
@@ -214,7 +213,7 @@ export function PlansPage({ trip, execute, services, openShare }: WorkspaceProps
       <p className={styles.destNote}>内置估算，非实时报价</p>
 
       <div className={styles.cards}>
-        {sortedPlans.map((plan) => {
+        {sortedPlans.map((plan, planIndex) => {
           const evalItem = evalById.get(plan.id);
           const asset = getDestinationAsset(plan.destinationId);
           const template = getDestinations(plan.templateVersion)?.find((t) => t.id === plan.destinationId);
@@ -223,20 +222,28 @@ export function PlansPage({ trip, execute, services, openShare }: WorkspaceProps
           const incomplete = evalItem?.incompleteCount ?? 0;
           const min = evalItem?.minEstimate ?? null;
           const max = evalItem?.maxEstimate ?? null;
+          const intentCounts = { approve: 0, acceptable: 0, decline: 0, pending: 0 };
+          for (const member of trip.members) intentCounts[intentLookup(member.id, plan.id, plan.version, trip.constraintRevision)?.value ?? 'pending']++;
+
           return (
             <article className={styles.planCard} key={plan.id}>
-              {asset ? <img className={styles.cardImage} src={asset.card} alt={asset.alt} width={480} height={270} loading="lazy" decoding="async" /> : null}
+              <div className={styles.imageFrame}><span className={styles.imageFallback} aria-hidden="true">{template?.name ?? plan.destinationId}</span>{asset ? <img className={styles.cardImage} src={asset.card} alt={asset.alt} width={480} height={270} loading="lazy" decoding="async" onError={event => { event.currentTarget.hidden = true; }}/> : null}{asset?.illustrative && <span className={styles.stamp}>示意图</span>}</div>
               <div className={styles.cardBody}>
-                <div className={styles.cardTitle}><h2>{template?.name ?? plan.destinationId}</h2><span className={styles.cardMeta}>{plan.days} 天 {plan.days - 1} 晚</span></div>
-                <span className={styles.cardMeta}>{plan.startDate} 出发 · {asset?.illustrative ? '示意图' : ''}</span>
+                <div className={styles.cardTitle}><h2>{template?.name ?? plan.destinationId}</h2><span className={styles.cardMeta}>{String(planIndex + 1).padStart(2, '0')}</span></div>
+                <span className={styles.cardMeta}>{plan.startDate} 出发 · {plan.days} 天 {plan.days - 1} 晚</span>
                 <div className={styles.cardEstimate}>
                   {min === null ? '估算待补充' : max === null ? formatMoney(min) : min === max ? formatMoney(min) : `${formatMoney(min)}～${formatMoney(max)} / 人`}
                 </div>
+                <span className={styles.cardMeta}>个人基准估算范围，非实时报价</span>
+                <div className={styles.ticketLine}/>
+                <ul className={styles.memberStrip} aria-label="成员适配">{evalItem?.members.map((fit, index) => { const member = trip.members.find(m => m.id === fit.memberId); const tone = fit.timeFits === false || fit.budgetFits === false ? 'danger' : fit.timeFits === null || fit.budgetFits === null ? 'warning' : 'success'; return <li key={fit.memberId} className={index > 7 ? 'sr-only' : ''}><span className={styles.fitAvatar} data-tone={tone}><span className={styles.fitBadge} aria-hidden="true">{tone === 'success' ? <Check size={10}/> : tone === 'danger' ? <TriangleAlert size={10}/> : <Minus size={10}/>}</span><Avatar name={member?.name ?? ''} index={trip.members.findIndex(m => m.id === fit.memberId)}/></span><span className="sr-only">{member?.name}：{fit.reasons.join('、') || '时间与预算满足'}</span></li>; })}{trip.members.length > 8 && <li aria-hidden="true">+{trip.members.length - 8}</li>}</ul>
                 <div className={styles.metrics}>
-                  <span className={timePass === trip.members.length ? styles.metricOk : styles.metricConflict}>时间 {timePass}/{trip.members.length}</span>
-                  <span className={budgetPass === trip.members.length ? styles.metricOk : styles.metricConflict}>预算 {budgetPass}/{trip.members.length}</span>
+                  <StatusChip tone={timePass === trip.members.length ? 'success' : evalItem?.members.some(m => m.timeFits === false) ? 'danger' : 'warning'}>时间 {timePass}/{trip.members.length}</StatusChip>
+                  <StatusChip tone={budgetPass === trip.members.length ? 'success' : evalItem?.members.some(m => m.budgetFits === false) ? 'danger' : 'warning'}>预算 {budgetPass}/{trip.members.length}</StatusChip>
                   {incomplete > 0 ? <span className={styles.metricUnknown}>待补充 {incomplete}</span> : null}
                 </div>
+                <div className={styles.segmentBar} aria-hidden="true">{Object.entries(intentCounts).map(([key, count]) => <span key={key} data-intent={key} style={{ flex: count }}/>)}</div>
+                <div className={styles.intentLegend}>赞成 {intentCounts.approve} · 可接受 {intentCounts.acceptable} · 不参加 {intentCounts.decline} · 待反馈 {intentCounts.pending}</div>
                 <div className={styles.cardActions}>
                   <Button variant="secondary" onClick={() => openDetail(plan.id)}>查看方案 <ChevronRight size={16} /></Button>
                   {trip.confirmation?.planId === plan.id && statusKind === 'confirmed' ? <span className={styles.metricOk}>已确认</span> : null}
@@ -251,7 +258,7 @@ export function PlansPage({ trip, execute, services, openShare }: WorkspaceProps
         onClose={() => setSelectedPlanId(null)}
         footer={<>
           <Button variant="secondary" onClick={() => setSelectedPlanId(null)}>关闭</Button>
-          {selectedPlan && statusKind !== 'confirmed' ? <Button onClick={confirm} disabled={busy || !consensus?.canConfirm}>{busy ? '确认中…' : '确认此方案'}</Button> : null}
+          {selectedPlan && !consensus?.confirmed ? <Button onClick={confirm} disabled={busy || !consensus?.canConfirm}>{busy ? '确认中…' : '确认此方案'}</Button> : <Link className="button button-primary" to={'/trip/' + trip.id + '/itinerary'}>查看日程</Link>}
         </>}>
         {selectedPlan ? (
           <div>
@@ -266,16 +273,12 @@ export function PlansPage({ trip, execute, services, openShare }: WorkspaceProps
               <h2>成员适配</h2>
               {selectedEval?.members.length ? selectedEval.members.map((memberEval) => {
                 const member = trip.members.find((m) => m.id === memberEval.memberId);
-                const currentIntent = trip.intents
-                  .filter((i) => i.memberId === memberEval.memberId && i.planId === selectedPlan.id && i.planVersion === selectedPlan.version && i.constraintRevision === trip.constraintRevision)
-                  .sort((a, b) => b.recordedAt.localeCompare(a.recordedAt))[0];
+                const currentIntent = intentLookup(memberEval.memberId, selectedPlan.id, selectedPlan.version, trip.constraintRevision);
                 return (
                   <div className={styles.memberFitRow} key={memberEval.memberId} role="group" aria-label={(member?.name ?? memberEval.memberId) + "方案适配"}>
-                    <strong>{member?.name ?? memberEval.memberId}</strong>
-                    <span>{memberEval.total === null ? '估算待补' : formatMoney(memberEval.total)}</span>
-                    <span className={memberEval.budgetFits === false ? styles.metricConflict : memberEval.budgetFits === true ? styles.metricOk : styles.metricUnknown}>
-                      预算{memberEval.budgetFits === null ? '待补' : memberEval.budgetFits ? '通过' : '冲突'}
-                    </span>
+                    <strong className={styles.memberName}><Avatar name={member?.name ?? ''} index={trip.members.findIndex(m => m.id === memberEval.memberId)}/>{member?.name ?? memberEval.memberId}</strong>
+                    <span>{memberEval.total === null ? '估算待补' : formatMoney(memberEval.total)}<small className={styles.budgetCap}>预算上限 {member?.budgetCap === null || member?.budgetCap === undefined ? '待补充' : formatMoney(member.budgetCap)}</small></span>
+                    <div className={styles.fitStates}><StatusChip tone={memberEval.timeFits === null ? 'warning' : memberEval.timeFits ? 'success' : 'danger'}>时间{memberEval.timeFits === null ? '待补' : memberEval.timeFits ? '通过' : '冲突'}</StatusChip><StatusChip tone={memberEval.budgetFits === null ? 'warning' : memberEval.budgetFits ? 'success' : 'danger'}>预算{memberEval.budgetFits === null ? '待补' : memberEval.budgetFits ? '通过' : '冲突'}</StatusChip></div>
                     <span className={styles.intentControls}>
                       {intentMember === memberEval.memberId ? (
                         <>
@@ -338,6 +341,7 @@ export function PlansPage({ trip, execute, services, openShare }: WorkspaceProps
               })}
             </section>
 
+            <section className={styles.section}><button className="button button-secondary" aria-expanded={templateOpen} onClick={() => setTemplateOpen(!templateOpen)}>日程模板预览<ChevronDown size={16}/></button>{templateOpen && (() => { const template = services.planning.getTemplate(selectedPlan.destinationId, selectedPlan.templateVersion); return template.ok ? <ul className={styles.templateList}>{template.value.activities.filter(a => a.dayOffset < selectedPlan.days).map(a => <li key={a.key}><span>第 {a.dayOffset + 1} 天 · {a.startTime ?? '未定时间'}</span><strong>{a.title}</strong></li>)}</ul> : <p>{template.error.message}</p>; })()}</section>
             <section className={styles.section}>
               <h2>确认条件</h2>
               {consensus?.reasons.length ? (

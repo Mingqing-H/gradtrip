@@ -1,3 +1,4 @@
+import { ExternalShell } from './ExternalShell';
 import { useEffect, useState } from 'react';
 import type { ExternalPageProps, Trip } from '../../contracts/services';
 import type { ResponseBody } from '../../domain/sharing/types';
@@ -17,12 +18,12 @@ export function ResponsePage({ data, repository, services, openImport }: Externa
     void repository.get(tripId).then(result => { if (active) setLocal({ id: tripId, trip: result.ok ? result.value : null }); });
     return () => { active = false; };
   }, [repository, tripId]);
-  if (!decoded.ok || decoded.envelope.type !== 'response') return <div className="external-page"><h1>反馈回传</h1><ErrorNotice>{decoded.ok ? '这不是成员反馈数据' : decoded.error}</ErrorNotice><a href="#/">返回</a></div>;
+  if (!decoded.ok || decoded.envelope.type !== 'response') return <ExternalShell><h1>反馈回传</h1><ErrorNotice>{decoded.ok ? '这不是成员反馈数据' : decoded.error}</ErrorNotice><a href="#/">返回</a></ExternalShell>;
   const envelope = decoded.envelope; const body = envelope.body as ResponseBody;
   const shareUrl = app.createShareUrl('response', envelope);
   const localTrip = local?.id === tripId ? local.trip : null;
   const download = () => { const result = app.downloadEnvelope(envelope, 'feedback.json'); setMessage(result.ok ? '已请求下载文件' : result.error.message); };
-  return <div className="external-page stack">
+  return <ExternalShell><div className="stack">
     <h1>{body.memberName}的反馈</h1>
     <dl>
       <div><dt>出发城市</dt><dd>{body.profile.originCity ?? '未填写'}</dd></div>
@@ -41,5 +42,5 @@ export function ResponsePage({ data, repository, services, openImport }: Externa
     {message ? <p role="status">{message}</p> : null}
     {localTrip ? <Button onClick={() => openImport(JSON.stringify(envelope))}>预览并导入</Button> : local?.id === tripId ? <p>本设备没有原旅行，请在组织者设备导入。</p> : null}
     <a href="#/">返回工作台</a>
-  </div>;
+  </div></ExternalShell>;
 }

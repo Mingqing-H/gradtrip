@@ -1,7 +1,8 @@
+import { useNavigationSignals } from './useNavigationSignals';
 import { Component, Suspense, useEffect, useRef, useState, type ReactNode } from 'react';
 import { HashRouter, Link, Navigate, Route, Routes, useNavigate, useParams, useSearchParams } from 'react-router-dom';
-import { CalendarDays, Compass, Map, Plus, Share2, Users, Wallet } from 'lucide-react';
-import { Button, Dialog, ErrorNotice, Menu, Select, Status, Input } from '../components/ui';
+import { CalendarDays, Map, Plus, Share2, Users, Wallet } from 'lucide-react';
+import { Button, Dialog, ErrorNotice, Menu, Select, Status, Input, Brand } from '../components/ui';
 import type { ExternalPageProps, SharingApplicationDependencies, SharingPanel, WorkspaceProps } from '../contracts/services';
 import { getRuntime, dateToday, type Runtime } from './runtime';
 import { useWorkspace } from './useWorkspace';
@@ -33,6 +34,7 @@ function Workbench({ runtime }: { runtime: Runtime }) {
   const [submitting, setSubmitting] = useState(false); const [panel, setPanel] = useState<SharingPanel | null>(() => search.get('import') === '1' ? { type: 'import', data: search.get('data') ?? undefined } : null);
   const [leaveTarget, setLeaveTarget] = useState<string | null>(null);
   const trip = state.trip;
+  const signals = useNavigationSignals(trip, dependencies.planning, dateToday(new Date()));
   const currentRecord = state.records.find(record => record.id === params.tripId);
   const go = (target: string) => {
     if (state.saveStatus === 'unsaved' || state.saveStatus === 'conflict' || state.saveStatus === 'saving') setLeaveTarget(target);
@@ -89,8 +91,8 @@ function Workbench({ runtime }: { runtime: Runtime }) {
     if (result.ok) { setDialog(null); navigate('/'); } else setFormError(result.error.message);
   };
   return <><SkipLink/><div className="shell">
-    <aside className="sidebar"><Link className="brand" to="/"><Compass size={28}/>同路</Link><nav aria-label="工作区">{navigation.map(({ path, label, Icon }) =>
-      <Link key={path} to={params.tripId ? '/trip/' + params.tripId + '/' + path : '/'} className={'nav-link' + (path === workspace ? ' active' : '')} aria-current={path === workspace ? 'page' : undefined} onClick={event => { event.preventDefault(); go(params.tripId ? '/trip/' + params.tripId + '/' + path : '/'); }}><Icon size={20}/>{label}</Link>
+    <aside className="sidebar"><Link className="brand" to="/"><Brand/></Link><nav aria-label="工作区">{navigation.map(({ path, label, Icon }) =>
+      <Link key={path} to={params.tripId ? '/trip/' + params.tripId + '/' + path : '/'} className={'nav-link' + (path === workspace ? ' active' : '')} aria-describedby={signals ? 'nav-status-' + path : undefined} aria-current={path === workspace ? 'page' : undefined} onClick={event => { event.preventDefault(); go(params.tripId ? '/trip/' + params.tripId + '/' + path : '/'); }}><Icon size={20} aria-hidden="true"/><span className="nav-label">{label}<span className="nav-signal" id={'nav-status-' + path} aria-hidden="true">{signals?.[path].text ?? ''}</span></span>{signals?.[path].pending && <span className="nav-dot" aria-hidden="true"/>}</Link>
     )}</nav><div className="sidebar-note">毕业旅行<br/>本地工作副本</div></aside>
     <div className="workspace">
       <header className="topbar">

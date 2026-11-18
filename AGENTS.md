@@ -3,6 +3,7 @@
 ## 工作方式
 
 - 使用第一性原理：先明确本次真实目标、约束和成功标准，再决定实现；不要为了套用惯例增加页面、依赖或服务。
+- 默认用 ELI5 的方式和我说话，如果我要求则深入讲解。
 - 开始任务先查看 `./HANDOFF.MD`（若存在），再检查实际文件和实现状态；设计文档不代表功能已完成。
 - 默认中文沟通，围绕当前任务完成必要工作；避免重复确认已授权事项，不擅自扩大 MVP 范围。
 - 尊重已有修改，执行前了解相关上下文；不覆盖无关文件，不重置用户数据。
@@ -26,6 +27,7 @@
 | 了解原始题目 | [docs/core_task.md](./docs/core_task.md) | 背景、提交条件 |
 | 确认功能范围 | [docs/PRD.md](./docs/PRD.md) | P0、用户流程、范围与产品验收 |
 | 处理业务逻辑 | [docs/BUSINESS_RULES.md](./docs/BUSINESS_RULES.md) | 金额、日期、匹配、共识、版本、导入与结算 |
+| 界面视觉与美化 | [docs/design.md](./docs/design.md) | Design v2 令牌、组件外观、响应式布局与视觉验收 |
 | 编写或调整界面 | [docs/pages.md](./docs/pages.md) | 页面、布局、弹层、响应式与交互状态 |
 | 工程选型与模块划分 | [docs/architecture.md](./docs/architecture.md) | 技术栈、分层、数据流、图标与图片管线 |
 | 开发、测试、性能与发布 | [docs/MVP_DEVELOPMENT.md](./docs/MVP_DEVELOPMENT.md) | 开发阶段、数据结构、测试与部署门槛 |

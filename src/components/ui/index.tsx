@@ -1,19 +1,19 @@
 import { useEffect, useId, useRef, type ButtonHTMLAttributes, type InputHTMLAttributes, type ReactNode, type Ref, type RefObject, type SelectHTMLAttributes } from 'react';
-import { CheckCircle2, ChevronDown, CircleAlert, LoaderCircle, X } from 'lucide-react';
+import { CircleCheck, ChevronDown, CircleAlert, LoaderCircle, X } from 'lucide-react';
 import type { SaveStatus } from '../../contracts/services';
 export function Button({ variant = 'primary', className = '', ...props }: ButtonHTMLAttributes<HTMLButtonElement> & { variant?: 'primary' | 'secondary' | 'danger' | 'ghost' }) {
   return <button type="button" className={`button button-${variant} ${className}`} {...props} />;
 }
 export function Input({ label, error, id, inputRef, ...props }: InputHTMLAttributes<HTMLInputElement> & { label: string; error?: string; inputRef?: Ref<HTMLInputElement> }) {
   const generated = useId(); const inputId = id ?? generated;
-  return <div className="field"><label htmlFor={inputId}>{label}</label><input ref={inputRef} id={inputId} aria-invalid={!!error} aria-describedby={error ? `${inputId}-error` : undefined} {...props}/>{error ? <span id={`${inputId}-error`} className="field-error">{error}</span> : null}</div>;
+  return <div className="field"><label htmlFor={inputId}>{label}</label><input ref={inputRef} id={inputId} aria-invalid={!!error} aria-describedby={error ? `${inputId}-error` : undefined} {...props}/>{error ? <span id={`${inputId}-error`} className="field-error"><CircleAlert size={16} aria-hidden="true"/>{error}</span> : null}</div>;
 }
 export function Select({ label, error, id, children, ...props }: SelectHTMLAttributes<HTMLSelectElement> & { label: string; error?: string }) {
   const generated = useId(); const inputId = id ?? generated;
-  return <div className="field"><label htmlFor={inputId}>{label}</label><select id={inputId} aria-invalid={!!error} aria-describedby={error ? `${inputId}-error` : undefined} {...props}>{children}</select>{error ? <span id={`${inputId}-error`} className="field-error">{error}</span> : null}</div>;
+  return <div className="field"><label htmlFor={inputId}>{label}</label><select id={inputId} aria-invalid={!!error} aria-describedby={error ? `${inputId}-error` : undefined} {...props}>{children}</select>{error ? <span id={`${inputId}-error`} className="field-error"><CircleAlert size={16} aria-hidden="true"/>{error}</span> : null}</div>;
 }
-export interface DialogProps { open: boolean; title: string; onClose: () => void; children: ReactNode; footer?: ReactNode; returnFocusRef?: RefObject<HTMLElement | null> }
-function Modal({ open, title, onClose, children, footer, returnFocusRef, drawer = false }: DialogProps & { drawer?: boolean }) {
+export interface DialogProps { open: boolean; title: string; onClose: () => void; children: ReactNode; footer?: ReactNode; returnFocusRef?: RefObject<HTMLElement | null>; initialFocusSelector?: string }
+function Modal({ open, title, onClose, children, footer, returnFocusRef, initialFocusSelector, drawer = false }: DialogProps & { drawer?: boolean }) {
   const ref = useRef<HTMLDialogElement>(null); const titleId = useId();
   useEffect(() => {
     const dialog = ref.current;
@@ -21,7 +21,7 @@ function Modal({ open, title, onClose, children, footer, returnFocusRef, drawer 
     const previous = document.activeElement instanceof HTMLElement ? document.activeElement : null;
     const returnTarget = returnFocusRef?.current ?? previous;
     if (!dialog.open) dialog.showModal();
-    dialog.querySelector<HTMLElement>('input:not([disabled]), select:not([disabled]), textarea:not([disabled])')?.focus();
+    (initialFocusSelector ? dialog.querySelector<HTMLElement>(initialFocusSelector) : dialog.querySelector<HTMLElement>('input:not([disabled]), select:not([disabled]), textarea:not([disabled])'))?.focus();
     return () => {
       dialog.close();
       const target = returnTarget;
@@ -29,7 +29,7 @@ function Modal({ open, title, onClose, children, footer, returnFocusRef, drawer 
         if (target?.isConnected && !target.closest('dialog:not([open])')) target.focus();
       });
     };
-  }, [open, returnFocusRef]);
+  }, [open, returnFocusRef, initialFocusSelector]);
   return <dialog ref={ref} className={drawer ? 'modal drawer' : 'modal'} aria-labelledby={titleId} onCancel={event => { event.preventDefault(); onClose(); }}>
     <header className="modal-heading"><h2 id={titleId}>{title}</h2><Button variant="ghost" aria-label="关闭" onClick={onClose}><X size={20}/></Button></header>
     <div className="modal-body">{children}</div>{footer ? <footer className="modal-footer">{footer}</footer> : null}
@@ -50,7 +50,8 @@ export function Menu({ label, children }: { label: string; children: ReactNode }
 }
 const statuses: Record<SaveStatus, string> = { saved: '已保存到此设备', saving: '正在保存…', unsaved: '尚未保存', conflict: '其他标签页已更新', memoryOnly: '临时体验 · 刷新后丢失' };
 export function Status({ status }: { status: SaveStatus }) {
-  const Icon = status === 'saved' ? CheckCircle2 : status === 'saving' ? LoaderCircle : CircleAlert;
+  const Icon = status === 'saved' ? CircleCheck : status === 'saving' ? LoaderCircle : CircleAlert;
   return <span role="status" aria-label="保存状态" className={`save-status status-${status}`}><Icon size={16} aria-hidden="true"/>{statuses[status]}</span>;
 }
 export function ErrorNotice({ children }: { children: ReactNode }) { return <div role="alert" className="error-notice">{children}</div>; }
+export { StatusChip, Avatar, TagChip, PageHeader, Sheet, StatStrip, Stat, Notice, Brand, ActionMenu, SegmentedControl } from './presentation';

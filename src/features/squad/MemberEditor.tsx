@@ -52,21 +52,21 @@ export function MemberEditor({ draft, onChange, errors }: {
 
   return (
     <div className={styles.form}>
-      <Input label="昵称" value={draft.name} error={errors.name} maxLength={40}
+      <Input data-profile-field="name" label="昵称" value={draft.name} error={errors.name} maxLength={40}
         onChange={(event) => onChange({ ...draft, name: event.target.value })} />
-      <Input label="出发城市（未知可留空）" value={draft.originCity} error={errors.originCity} list="city-suggestions"
+      <Input data-profile-field="originCity" label="出发城市（未知可留空）" value={draft.originCity} error={errors.originCity} list="city-suggestions"
         onChange={(event) => onChange({ ...draft, originCity: event.target.value })} />
       <datalist id="city-suggestions">
         {['上海', '杭州', '南京', '北京', '广州', '成都', '武汉', '西安', '厦门', '青岛'].map((city) => <option key={city} value={city} />)}
       </datalist>
-      <Input label="预算上限（元，留空为待补充；0 表示零预算）" value={draft.budgetCap}
+      <Input data-profile-field="budgetCap" label="预算上限（元，留空为待补充；0 表示零预算）" value={draft.budgetCap}
         error={errors.budgetCap} inputMode="decimal"
         onChange={(event) => onChange({ ...draft, budgetCap: event.target.value })} />
       <fieldset className={styles.fieldset}>
         <legend>可用日期区间</legend>
         {draft.availability.map((range, index) => (
           <div className={styles.rangeRow} key={index}>
-            <Input label={`第 ${index + 1} 段起日`} type="date" value={range.start} error={errors[`availability.${index}`]}
+            <Input data-profile-field="availability" label={`第 ${index + 1} 段起日`} type="date" value={range.start} error={errors[`availability.${index}`]}
               onChange={(event) => updateRange(index, { start: event.target.value })} />
             <Input label="止日" type="date" value={range.end}
               onChange={(event) => updateRange(index, { end: event.target.value })} />

@@ -5,7 +5,7 @@
  */
 import { useMemo, useState } from 'react';
 import { ArrowRight, ChevronDown, Plus, Receipt, RotateCcw, ShieldAlert } from 'lucide-react';
-import { Button, Dialog, ErrorNotice, Input, Select } from '../../components/ui';
+import { Button, Dialog, Drawer, ErrorNotice, Input, Select, PageHeader, Avatar, StatusChip } from '../../components/ui';
 import { formatMoney, parseMoney } from '../../domain/money';
 import { getLedgerSummary } from '../../domain/ledger/balances';
 import {
@@ -289,17 +289,12 @@ export function LedgerPage({ trip, execute }: WorkspaceProps) {
 
   return (
     <section className={styles.page}>
-      <header className={styles.heading}>
-        <h1>账本</h1>
-        <Button onClick={openCreate} disabled={busy || summary.hasActiveSettlement}>
-          <Plus size={20} /> 记一笔
-        </Button>
-      </header>
+      <PageHeader title="账本" actions={<Button className="mobile-primary" onClick={openCreate} disabled={busy || summary.hasActiveSettlement}><Plus size={20}/>记一笔</Button>}/>
 
-      <div className={styles.tabs} role="tablist" aria-label="账本视图">
+      <div className={styles.tabs} role="tablist" aria-label="账本视图" onKeyDown={event => { if (['ArrowLeft', 'ArrowRight', 'Home', 'End'].includes(event.key)) { event.preventDefault(); const next = event.key === 'Home' ? 'expenses' : event.key === 'End' ? 'settlement' : tab === 'expenses' ? 'settlement' : 'expenses'; setTab(next); event.currentTarget.querySelector<HTMLButtonElement>(next === 'expenses' ? '#expenses-tab' : '#settlement-tab')?.focus(); } }}>
         <button
           role="tab"
-          aria-selected={tab === 'expenses'}
+          id="expenses-tab" aria-controls="expenses-panel" tabIndex={tab === 'expenses' ? 0 : -1} aria-selected={tab === 'expenses'}
           className={tab === 'expenses' ? styles.activeTab : styles.tab}
           onClick={() => setTab('expenses')}
         >
@@ -307,7 +302,7 @@ export function LedgerPage({ trip, execute }: WorkspaceProps) {
         </button>
         <button
           role="tab"
-          aria-selected={tab === 'settlement'}
+          id="settlement-tab" aria-controls="settlement-panel" tabIndex={tab === 'settlement' ? 0 : -1} aria-selected={tab === 'settlement'}
           className={tab === 'settlement' ? styles.activeTab : styles.tab}
           onClick={() => setTab('settlement')}
         >
@@ -317,7 +312,7 @@ export function LedgerPage({ trip, execute }: WorkspaceProps) {
       {error !== null && <ErrorNotice>{error}</ErrorNotice>}
 
       {tab === 'expenses' && (
-        <>
+        <div className={styles.panel} role="tabpanel" id="expenses-panel" aria-labelledby="expenses-tab">
           <div className={styles.total}><span>实际支出 </span><strong>{formatMoney(summary.totalExpense)}</strong><small> · {summary.expenseCount} 笔</small></div>
           {summary.hasActiveSettlement && (
             <ErrorNotice>
@@ -327,9 +322,7 @@ export function LedgerPage({ trip, execute }: WorkspaceProps) {
           {sortedExpenses.length === 0 ? (
             <div className="empty-state">
               <h2>还没有费用</h2>
-              <Button onClick={openCreate}>
-                <Plus size={20} /> 记一笔
-              </Button>
+
             </div>
           ) : (
             <ul className={styles.expenseList}>
@@ -372,47 +365,19 @@ export function LedgerPage({ trip, execute }: WorkspaceProps) {
               ))}
             </ul>
           )}
-        </>
+        </div>
       )}
 
       {tab === 'settlement' && (
-        <>
+        <div className={styles.panel} role="tabpanel" id="settlement-panel" aria-labelledby="settlement-tab">
           <h2>成员余额</h2>
           {summary.balances.every((row) => row.balance === 0) && summary.expenseCount > 0 && (
             <p className={styles.settled}>当前已结清</p>
           )}
-          <div className={styles.tableWrap}>
-            <table className={styles.table}>
-              <thead>
-                <tr>
-                  <th scope="col">成员</th>
-                  <th scope="col">已付</th>
-                  <th scope="col">应承担</th>
-                  <th scope="col">已转出</th>
-                  <th scope="col">已转入</th>
-                  <th scope="col">当前余额</th>
-                </tr>
-              </thead>
-              <tbody>
-                {summary.balances.map((row) => (
-                  <tr key={row.memberId}>
-                    <th scope="row">{nameOf(row.memberId)}</th>
-                    <td>{formatMoney(row.paid)}</td>
-                    <td>{formatMoney(row.owed)}</td>
-                    <td>{formatMoney(row.sent)}</td>
-                    <td>{formatMoney(row.received)}</td>
-                    <td className={styles.balance}>
-                      {row.balance > 0
-                        ? `应收 ${formatMoney(row.balance)}`
-                        : row.balance < 0
-                          ? `应付 ${formatMoney(-row.balance)}`
-                          : '已结清'}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+          <ul className={styles.balanceList}>{summary.balances.map(row => {
+            const maximum = Math.max(1, ...summary.balances.map(item => Math.abs(item.balance)));
+            return <li key={row.memberId}><div className={styles.balanceRow}><span className={styles.balanceName}><Avatar name={nameOf(row.memberId)} index={trip.members.findIndex(m => m.id === row.memberId)}/>{nameOf(row.memberId)}</span><span className={styles.balanceTrack} aria-hidden="true"><span className={row.balance < 0 ? styles.negativeBar : styles.positiveBar} style={{ width: row.balance === 0 ? 0 : 'max(2px, ' + Math.abs(row.balance) / maximum * 50 + '%)' }}/></span><strong>{row.balance > 0 ? '应收 ' + formatMoney(row.balance) : row.balance < 0 ? '应付 ' + formatMoney(-row.balance) : '已结清'}</strong><Button variant="ghost" aria-expanded={expandedRows.has('balance-' + row.memberId)} onClick={() => toggleRow('balance-' + row.memberId)}>明细</Button></div>{expandedRows.has('balance-' + row.memberId) && <div className={styles.balanceDetail}><span>已付 {formatMoney(row.paid)}</span><span>应承担 {formatMoney(row.owed)}</span><span>已转出 {formatMoney(row.sent)}</span><span>已转入 {formatMoney(row.received)}</span></div>}</li>;
+          })}</ul>
 
           <h2>转账建议</h2>
           <p className="muted">仅为减少操作的建议，不承诺最少笔数。</p>
@@ -442,7 +407,7 @@ export function LedgerPage({ trip, execute }: WorkspaceProps) {
               {trip.settlements.map((settlement) => (
                 <li key={settlement.id}>
                   {nameOf(settlement.fromId)} → {nameOf(settlement.toId)} · {formatMoney(settlement.amount)} ·{' '}
-                  {settlement.voidedAt === null ? '已记录' : '已撤销（不计入余额）'}
+                  <StatusChip tone={settlement.voidedAt === null ? 'success' : 'neutral'}>{settlement.voidedAt === null ? '已记录' : '已撤销（不计入余额）'}</StatusChip>
                 </li>
               ))}
             </ul>
@@ -453,10 +418,10 @@ export function LedgerPage({ trip, execute }: WorkspaceProps) {
             </Button>
           )}
           <p className="muted">撤销只移除本地记录效力，真实线下转账不会被撤回。撤销后可更正费用并按真实情况重新登记。</p>
-        </>
+        </div>
       )}
 
-      <Dialog
+      <Drawer
         open={form !== null}
         title={editingId === null ? '记一笔' : '编辑费用'}
         onClose={() => setForm(null)}
@@ -600,7 +565,7 @@ export function LedgerPage({ trip, execute }: WorkspaceProps) {
             )}
           </>
         )}
-      </Dialog>
+      </Drawer>
 
       <Dialog
         open={transfer !== null}

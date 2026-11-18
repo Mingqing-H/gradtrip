@@ -1,3 +1,5 @@
+import { ExternalShell } from './ExternalShell';
+import styles from './external.module.css';
 import { useState } from 'react';
 import type { ExternalPageProps } from '../../contracts/services';
 import type { Plan } from '../../domain/types';
@@ -20,7 +22,7 @@ export function JoinPage({ data, services }: ExternalPageProps) {
   const [response, setResponse] = useState<SharingEnvelope<ResponseBody> | null>(null);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [message, setMessage] = useState('');
-  if (!decoded.ok || decoded.envelope.type !== 'invitation') return <main className="external-page"><h1>成员填写</h1><ErrorNotice>{decoded.ok ? '这不是成员邀请数据' : decoded.error}</ErrorNotice><a href="#/">返回旅行</a></main>;
+  if (!decoded.ok || decoded.envelope.type !== 'invitation') return <ExternalShell><h1>成员填写</h1><ErrorNotice>{decoded.ok ? '这不是成员邀请数据' : decoded.error}</ErrorNotice><a href="#/">返回旅行</a></ExternalShell>;
   const invitation = decoded.envelope as SharingEnvelope<InvitationBody>;
   const body = invitation.body;
   const supported = body.plans.every(plan => services.planning.getTemplate(plan.destinationId, plan.templateVersion).ok);
@@ -45,23 +47,24 @@ export function JoinPage({ data, services }: ExternalPageProps) {
   }
   if (step === 'done' && response) {
     const url = app.createShareUrl('response', response);
-    return <main className="external-page"><h1>反馈已生成</h1><p>把链接或文件发给组织者，由对方预览并导入。</p>
+    return <ExternalShell><h1>反馈已生成</h1><p>把链接或文件发给组织者，由对方预览并导入。</p>
       {url.ok ? <div className="stack"><label>反馈链接<textarea aria-label="反馈链接" readOnly value={url.value} rows={4} onFocus={event => event.target.select()}/></label><Button onClick={() => void app.copyShareUrl(url.value).then(result => setMessage(result.ok ? '已复制' : result.error.message))}>复制反馈链接</Button></div> : <p>链接过长，请下载反馈文件。</p>}
       <div className="recovery-actions"><Button variant="secondary" onClick={() => { const result = app.downloadEnvelope(response, 'response.json'); setMessage(result.ok ? '已请求下载文件' : result.error.message); }}>下载反馈文件</Button><Button variant="ghost" onClick={() => setStep('intents')}>返回修改</Button></div>{message ? <p role="status">{message}</p> : null}
-    </main>;
+    </ExternalShell>;
   }
-  return <main className="external-page" style={{ maxWidth: 720 }}>
+  return <ExternalShell>
     <h1>{body.tripName}</h1><p>{body.member.name} · 填写后发回组织者</p>
+    <div className={styles.steps} aria-label="填写进度"><span aria-current={step === 'profile' ? 'step' : undefined}>个人资料</span><span aria-current={step === 'intents' ? 'step' : undefined}>方案意向</span></div>
     {!supported ? <ErrorNotice>邀请使用的估算模板版本暂不支持，请联系组织者重新生成邀请。</ErrorNotice> : null}
     {step === 'profile' ? <section className="empty-state">
       <Input label="昵称" value={name} placeholder={body.member.name} onChange={event => setName(event.target.value)} error={errors.name}/>
       <Input label="出发城市" value={city} onChange={event => setCity(event.target.value)} error={errors.originCity}/>
       <Input label="预算上限（元，选填）" value={budget} inputMode="decimal" onChange={event => setBudget(event.target.value)} error={errors.budget}/>
-      <fieldset style={{ border: 0, padding: 0, minWidth: 0 }}><legend>可用日期（选填）</legend>{availability.map((range, index) => <div className="stack" key={index}>
+      <fieldset><legend>可用日期（选填）</legend>{availability.map((range, index) => <div className="stack" key={index}>
         <Input label={'可用开始日期 ' + (index + 1)} type="date" value={range.start} onChange={event => setAvailability(current => current.map((item, i) => i === index ? { ...item, start: event.target.value } : item))}/>
         <Input label={'可用结束日期 ' + (index + 1)} type="date" value={range.end} onChange={event => setAvailability(current => current.map((item, i) => i === index ? { ...item, end: event.target.value } : item))}/>
       </div>)}{errors.availability ? <p className="field-error">{errors.availability}</p> : null}{availability.length < 5 ? <Button variant="ghost" onClick={() => setAvailability(ranges => [...ranges, { start: '', end: '' }])}>增加日期区间</Button> : null}</fieldset>
-      <fieldset style={{ border: 0, padding: 0, margin: '16px 0' }}><legend>偏好</legend><div className="toolbar">{preferences.map(tag => <Button key={tag} variant={tags.includes(tag) ? 'primary' : 'secondary'} aria-pressed={tags.includes(tag)} onClick={() => setTags(current => current.includes(tag) ? current.filter(item => item !== tag) : [...current, tag])}>{tag}</Button>)}</div></fieldset>
+      <fieldset><legend>偏好</legend><div className="toolbar">{preferences.map(tag => <Button key={tag} variant={tags.includes(tag) ? 'primary' : 'secondary'} aria-pressed={tags.includes(tag)} onClick={() => setTags(current => current.includes(tag) ? current.filter(item => item !== tag) : [...current, tag])}>{tag}</Button>)}</div></fieldset>
       <Button onClick={next} disabled={!supported}>查看方案</Button>
     </section> : <section className="stack">
       {body.plans.map(entry => {
@@ -79,5 +82,5 @@ export function JoinPage({ data, services }: ExternalPageProps) {
       })}
       {errors.generate ? <ErrorNotice>{errors.generate}</ErrorNotice> : null}<div className="toolbar"><Button variant="secondary" onClick={() => setStep('profile')}>返回修改</Button><Button onClick={generate} disabled={!supported}>生成反馈</Button></div>
     </section>}
-  </main>;
+  </ExternalShell>;
 }
