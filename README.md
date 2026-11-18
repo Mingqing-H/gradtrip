@@ -2,7 +2,9 @@
 
 纯静态的毕业旅行工作台：小队、方案、日程、账本。数据属于当前浏览器，协作使用静态快照、邀请反馈或备份文件。
 
-T01 已完成公共基础与 T02/T03/T04 的本地最终集成，包含可操作示例、方案共识、日程预算、分摊结算、隔离设备反馈与备份恢复。公共接口及提交见 [T01 报告](docs/tasks/reports/T01.md)，检查和性能证据见 [验收记录](docs/ACCEPTANCE.md)。尚未绑定远程仓库或发布公开站点。
+公开地址：[同路 · 毕业旅行](https://mingqing-h.github.io/gradtrip/) · [源码](https://github.com/Mingqing-H/gradtrip)。
+
+已完成公共基础与小队方案、日程账本、分享反馈的集成，包含可操作示例、方案共识、日程预算、分摊结算、隔离设备反馈与备份恢复。公共接口及提交见 [T01 报告](docs/tasks/reports/T01.md)，检查和性能证据见 [验收记录](docs/ACCEPTANCE.md)。
 
 ## 本地开发
 
@@ -49,13 +51,13 @@ npm.cmd run preview
 
 ## 模块接入
 
-各功能只编辑自己归属的目录，导出约定的 index.ts。页面自动发现并按需加载，领域处理器与校验器在应用组合处注册。领域规则使用公共模型，页面只调用 execute，不直接写数据库。
+各功能只编辑自己归属的目录，导出约定的 index.ts。小队随主入口加载，其他页面自动发现并按需加载；领域处理器与校验器在应用组合处注册。领域规则使用公共模型，页面只调用 execute，不直接写数据库。
 
 T01 的 B0 固定提交为 266e2a3a671705fc42ecc38a7f565298f3a5078d。其他工作树应合并同一提交，保留共同祖先；兼容补充与最终接线见 T01 报告。
 
 ## 发布与回退
 
-当前没有远程仓库、工作流运行记录或公开地址，未上线。最终由协调者统一将通过验收的 foundation 分支接收至 main，再绑定固定仓库并在 Settings → Pages 选择 GitHub Actions。
+固定仓库为 `Mingqing-H/gradtrip`，发布源为 GitHub Actions。已将 `feat/foundation`（包含三个功能分支和最新界面更新）快进合并至 `main`；以后推送 `main` 会自动执行验证并发布到上方固定地址。[发布记录](https://github.com/Mingqing-H/gradtrip/actions/workflows/deploy.yml)。CI 固定 Ubuntu 24.04 与 Node 24.13.0，兼容锁定的 Playwright 工具链。
 
 生产 base 使用 `VITE_BASE_PATH`，默认 /gradtrip/。例如实际仓库 /graduation/：
 
@@ -67,4 +69,4 @@ npm.cmd run preview
 
 Actions 按实际仓库名设置 base，根站点自动使用 /；可通过仓库变量 PAGES_BASE_PATH 显式指定固定路径。所有链接都保留 base 与 Hash 路由。工作流执行类型、lint、测试、集成门槛、构建、体积和三尺寸浏览器检查，全部通过后才部署。
 
-发布前保留已知可用提交。若需回退，重新部署该提交并保留相同 URL；回退前检查数据 schema 和旧备份兼容，不能用清空用户数据解决问题。
+公开功能基线保留为 `v0.1.0`。若需回退，在 `main` 还原到该基线并推送，通过工作流发布到相同 URL；回退前检查数据 schema 和旧备份兼容，不能用清空用户数据解决问题。实际线上性能与未达标项见[验收记录](docs/ACCEPTANCE.md)。
