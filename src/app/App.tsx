@@ -97,7 +97,7 @@ function Workbench({ runtime }: { runtime: Runtime }) {
         {state.records.length ? <Select label="选择旅行" value={params.tripId ?? ''} onChange={event => go('/trip/' + event.target.value + '/squad')}>
           {!currentRecord ? <option value="">选择旅行</option> : null}
           {state.records.map(record => <option key={record.id} value={record.id}>{record.name}{record.isDemo ? ' · 示例' : ''}</option>)}
-        </Select> : <strong>毕业旅行</strong>}
+        </Select> : state.loading ? <div className="trip-selector-placeholder" aria-hidden="true"/> : <strong>毕业旅行</strong>}
         <div className="toolbar">{trip ? <Status status={state.saveStatus}/> : null}
           {trip ? <Button variant="secondary" onClick={() => setPanel({ type: 'share' })}><Share2 size={20}/>分享</Button> : null}
           <Menu label="更多"><Button variant="ghost" onClick={() => { const demo = state.records.find(record => record.isDemo); if (demo) go("/trip/" + demo.id + "/squad"); else void state.create("", true).then(result => { if (result.ok) navigate("/trip/" + result.value.id + "/squad"); }); }}>体验示例</Button><Button variant="ghost" onClick={() => openDialog('create')}><Plus size={20}/>创建旅行</Button>
@@ -107,7 +107,7 @@ function Workbench({ runtime }: { runtime: Runtime }) {
           </Menu>
         </div>
       </header>
-      {trip ? <div className="mobile-save-status"><Status status={state.saveStatus}/></div> : null}
+      {trip || state.loading ? <div className="mobile-save-status">{trip ? <Status status={state.saveStatus}/> : null}</div> : null}
       {runtime.repository.mode === 'memory' ? <div className="banner" role="status">临时体验模式：此浏览器无法持久保存，刷新后内容会丢失。{trip ? <Button variant="ghost" onClick={() => void exportRaw()}>导出当前内容</Button> : null}</div> : null}
       {runtime.warnings.length || state.settingsWarning ? <div className="banner">{[...runtime.warnings, state.settingsWarning].filter(Boolean).join('；')}</div> : null}
       <main id="main" tabIndex={-1} className="content">
