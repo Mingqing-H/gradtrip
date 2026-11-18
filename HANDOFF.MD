@@ -1,5 +1,19 @@
 # 实际踩坑记录
 
+## 发布：ubuntu-latest 升级后旧 Playwright 无法安装浏览器
+
+- 现象：首次 Pages CI 在 `playwright install --with-deps chrome` 失败，报不支持 `ubuntu26.04-x64` 的 ffmpeg；前面的类型、测试与构建均通过。
+- 原因：`ubuntu-latest` 已指向 Ubuntu 26.04，锁定的 Playwright 1.56.1 只包含较早发行版的依赖映射。
+- 处理：工作流固定为 Playwright 实际支持的 `ubuntu-24.04`，保留全部浏览器回归门槛后重新发布。
+- 避免：CI 系统版本与锁定工具链一起核对，不把浮动的 runner 标签视为可复现环境。
+
+## 发布：沙箱 GitHub CLI 无法读取宿主用户密钥环
+
+- 现象：沙箱中的 `gh auth status` 报登录 token 无效，同一台电脑的宿主用户环境却已正常登录。
+- 原因：CLI 凭据保存在宿主用户密钥环，沙箱身份不能读取；不代表用户的登录已经失效。
+- 处理：在授权的宿主环境执行 GitHub CLI 的仓库创建、推送与 Pages 配置；通过临时 credential helper 调用 `gh auth git-credential`，不输出或落盘 token。
+- 避免：先核对执行身份和密钥环可见性，不直接要求重新登录，不把凭据复制到仓库或日志。
+
 ## UI：CSS Modules 内引用全局基础组件类名
 
 - 现象：筛选区写了 `.filters .field`，控件仍保留基础组件的下边距，操作按钮与输入框不齐。
