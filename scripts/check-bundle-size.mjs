@@ -4,19 +4,24 @@ import path from 'node:path';
 const manifest = JSON.parse(await readFile('dist/.vite/manifest.json', 'utf8'));
 const entries = Object.entries(manifest).filter(([, value]) => value.isEntry).map(([key]) => key);
 const featureEntries = Object.keys(manifest).filter(key => /^src\/features\/[^/]+\/index\.ts$/.test(key));
-for (const candidate of [null, ...featureEntries]) {
+const candidates = [null, ...featureEntries].map(page => ({ page, rootRestore: false }));
+for (const page of featureEntries.filter(key => !/\/(squad|sharing)\//.test(key))) {
+  candidates.push({ page, rootRestore: true });
+}
+for (const { page: candidate, rootRestore } of candidates) {
   const needed = new Set();
   function visit(key) {
     const item = manifest[key]; if (!item || needed.has(item.file)) return;
     needed.add(item.file); (item.css ?? []).forEach(file => needed.add(file)); (item.imports ?? []).forEach(visit);
   }
   entries.forEach(visit); if (candidate) visit(candidate);
+  if (rootRestore) visit('src/features/squad/index.ts');
   let js = 0; let css = 0;
   for (const file of needed) {
     const size = gzipSync(await readFile(path.join('dist', file))).length;
     if (file.endsWith('.js')) js += size; else if (file.endsWith('.css')) css += size;
   }
-  console.log((candidate ?? 'shell') + ': JS gzip ' + (js / 1024).toFixed(2) + ' KiB / 200; CSS gzip ' + (css / 1024).toFixed(2) + ' KiB / 40');
+  console.log((candidate ?? 'shell') + (rootRestore ? ' (root restore)' : '') + ': JS gzip ' + (js / 1024).toFixed(2) + ' KiB / 200; CSS gzip ' + (css / 1024).toFixed(2) + ' KiB / 40');
   if (js > 200 * 1024 || css > 40 * 1024) process.exitCode = 1;
 }
 async function inspect(dir) {
