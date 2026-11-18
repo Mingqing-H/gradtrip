@@ -6,6 +6,7 @@ async function createTrip(page: Page, name = '自动验收旅行') {
   await page.getByRole('button', { name: '创建旅行', exact: true }).first().click();
   await page.getByLabel('旅行名称', { exact: true }).fill(name);
   await page.getByRole('dialog').getByRole('button', { name: '创建旅行', exact: true }).click();
+  await expect(page.getByRole('dialog')).not.toBeVisible();
   await expect(page.getByRole('status', { name: '保存状态' })).toContainText('已保存到此设备');
 }
 async function menu(page: Page, name: string) {

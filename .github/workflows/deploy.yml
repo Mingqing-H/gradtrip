@@ -29,7 +29,8 @@ jobs:
       - run: npm run check:integration
       - run: npm run build
       - run: npm run check:bundle-size
-      - run: npx playwright install --with-deps chrome
+      # The hosted Ubuntu image already includes Chrome and its OS dependencies.
+      - run: google-chrome --version
       # The E2E configuration takes the same base used by the production build.
       - run: npm run test:e2e
       - uses: actions/configure-pages@45bfe0192ca1faeb007ade9deae92b16b8254a0d # v6
