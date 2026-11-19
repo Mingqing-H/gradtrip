@@ -1,8 +1,8 @@
 // P01 小队工作区：成员列表、资料完整度、添加/编辑/删除、邀请与导入回调。
 import { useMemo, useState } from 'react';
-import { Plus, Trash2, Send, ArrowRight, MapPin, CalendarDays, Waves, Landmark, Building2, Mountain } from 'lucide-react';
+import { Plus, Trash2, Send, ArrowRight, MapPin, CalendarDays, Waves, Landmark, Building2, Mountain, Smile } from 'lucide-react';
 import { Link } from 'react-router-dom';
-import { Button, Dialog, Drawer, ErrorNotice, PageHeader, Avatar, StatusChip, ActionMenu } from '../../components/ui';
+import { Button, Dialog, Drawer, ErrorNotice, PageHeader, StatusChip, ActionMenu } from '../../components/ui';
 import type { Id, WorkspaceProps } from '../../contracts/services';
 import { getMemberProfileStatus, getMissingProfileFields } from '../../domain/planning';
 import { formatMoney } from '../../domain/money';
@@ -11,7 +11,20 @@ import { MemberEditor, draftFromMember, validateDraft, draftToMemberInput, findB
 import styles from './squad.module.css';
 const travelKit = new URL('../../assets/illustrations/travel-kit.webp', import.meta.url).href;
 const travelKitMobile = new URL('../../assets/illustrations/travel-kit-mobile.webp', import.meta.url).href;
+const portraitAtlas = new URL('../../assets/avatars/squad-portraits.webp', import.meta.url).href;
 const preferenceIcons: Record<string, typeof Waves> = { '海边': Waves, '人文': Landmark, '城市': Building2, '自然': Mountain };
+
+function MemberAvatar({ memberId, name }: { memberId: Id; name: string }) {
+  const [failed, setFailed] = useState(false);
+  const demoIndex = /^demo-m([1-6])$/.exec(memberId);
+  const hash = Array.from(memberId).reduce((value, character) => (Math.imul(value, 31) + character.codePointAt(0)!) >>> 0, 0);
+  const portrait = demoIndex ? Number(demoIndex[1]) - 1 : hash % 6;
+  return <span className={'avatar ' + styles.memberAvatar} data-tone={portrait} data-portrait={portrait} aria-hidden="true">
+    {Array.from(name)[0] ?? '?'}
+    {!failed && <img src={portraitAtlas} width={768} height={128} alt="" decoding="async"
+      style={{ left: `${-portrait * 100}%` }} onError={() => setFailed(true)}/>}
+  </span>;
+}
 
 interface EditorState {
   memberId: Id | null; // null = 新增
@@ -85,7 +98,7 @@ export function SquadPage({ trip, execute, services, openInvite, openImport }: W
 
   return (
     <div className={styles.squadPage}>
-      <PageHeader title="小队" subtitle={trip.members.length + ' 人 · ' + completeCount + '/' + trip.members.length + ' 资料齐全'} actions={<>
+      <PageHeader label="小队" title={<span lang="en">Our crew</span>} icon={<Smile/>} subtitle={trip.members.length + ' 人 · ' + completeCount + '/' + trip.members.length + ' 资料齐全'} actions={<>
         <Button variant="ghost" onClick={openImport}>导入反馈</Button>
         <Button className="mobile-primary" onClick={openAdd} disabled={trip.members.length >= 20} aria-label="添加成员"><Plus size={20}/>添加成员</Button>
       </>}/>
@@ -93,12 +106,12 @@ export function SquadPage({ trip, execute, services, openInvite, openImport }: W
       {trip.members.length >= 20 ? <p className={styles.formHint}>已达 20 人上限</p> : null}
       <div className={styles.rosterLayout}>
         <section className={styles.cardList} aria-label="小队成员">
-          {trip.members.length === 0 ? <div className="empty-state"><h2>还没有成员</h2><Button variant="ghost" onClick={openImport}>导入文件</Button></div> : trip.members.map((member, index) => {
+          {trip.members.length === 0 ? <div className="empty-state"><h2>还没有成员</h2><Button variant="ghost" onClick={openImport}>导入文件</Button></div> : trip.members.map(member => {
             const missing = getMissingProfileFields(member);
             const range = member.availability[0];
             return <article className={styles.memberCard} key={member.id}>
               <div className={styles.memberCardHead}>
-                <button className={styles.memberIdentity} onClick={() => openEdit(member.id)} aria-label={'编辑 ' + member.name}><Avatar name={member.name} index={index}/><strong>{member.name}</strong></button>
+                <button className={styles.memberIdentity} onClick={() => openEdit(member.id)} aria-label={'编辑 ' + member.name}><MemberAvatar memberId={member.id} name={member.name}/><strong>{member.name}</strong></button>
                 <ActionMenu label={'成员操作 ' + member.name}>
                   <Button variant="ghost" onClick={() => openInvite(member.id)} aria-label={'邀请 ' + member.name + ' 填写'}><Send size={18}/>邀请填写</Button>
                   <Button variant="ghost" aria-label={'删除 ' + member.name} onClick={() => { setSubmitError(''); setRemovingId(member.id); }}><Trash2 size={18}/>删除成员</Button>

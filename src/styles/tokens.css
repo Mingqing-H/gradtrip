@@ -3,6 +3,7 @@
   font-family: var(--font-sans); color: var(--ink-900); background: var(--canvas); font-synthesis: none;
   --font-sans: 'Noto Sans SC', 'PingFang SC', 'HarmonyOS Sans SC', 'Microsoft YaHei UI', 'Microsoft YaHei', system-ui, sans-serif;
   --font-display: var(--font-sans); --font-heading: var(--font-sans);
+  --font-editorial: Georgia, Cambria, 'Times New Roman', serif;
   --canvas: #F8F7FD; --canvas-sunken: #F0ECFB; --surface: #FFFFFF;
   --line: #E5E0F2; --line-strong: #D2C9EB; --control-border: #8F83AC;
   --ink-900: #22243D; --ink-700: #484B67; --ink-500: #6B6D86; --ink-300: #A4A2B5;

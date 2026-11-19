@@ -1,0 +1,40 @@
+{
+  "images": [
+    {
+      "number": 3,
+      "page": "小队",
+      "file": "squad.png",
+      "width": 1487,
+      "height": 1058,
+      "bytes": 1497508,
+      "sha256": "5a1065c3d55ec4e6d69e7a8f699fa3bb04cde24574fb6939a7bb06cb104c26cd"
+    },
+    {
+      "number": 6,
+      "page": "方案",
+      "file": "plans.png",
+      "width": 1487,
+      "height": 1058,
+      "bytes": 1782242,
+      "sha256": "2952b5ff85cc164c9ab0b6027fb0cf9a4ddde94a6d8274a424197e6a82e57a1f"
+    },
+    {
+      "number": 9,
+      "page": "日程",
+      "file": "itinerary.png",
+      "width": 1487,
+      "height": 1058,
+      "bytes": 1509826,
+      "sha256": "d0bebbd4cce6c0827a2d273ddbfd26d5f72113bc18d97ee1cd2f6d1eb35cbc08"
+    },
+    {
+      "number": 12,
+      "page": "账本",
+      "file": "ledger.png",
+      "width": 1487,
+      "height": 1058,
+      "bytes": 1504186,
+      "sha256": "0c49e218c19cc708d96490cd40ec3f7b03043e58b124930b66e414c47386d9bd"
+    }
+  ]
+}

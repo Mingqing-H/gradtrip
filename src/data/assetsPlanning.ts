@@ -1,6 +1,6 @@
 // T02 目的地素材运行时清单。
 // - 只保留界面需要的稳定资源 ID、文件与替代文本；长提示词/许可记录在
-//   docs/assets/SOURCES-planning.md（不打包进首屏）。
+//   docs/assets/SOURCES-v3.md（不打包进首屏）；旧制作过程见 SOURCES-planning.md。
 // - 480px 版本用于候选卡片，960px 用于详情；均为示意图（非实拍）。
 // - 图片通过 Vite 的 ?url 导入以获得带内容哈希的本地路径和正确 base。
 

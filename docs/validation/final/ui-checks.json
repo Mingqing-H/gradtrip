@@ -1,0 +1,473 @@
+{
+  "base": "http://127.0.0.1:4174/gradtrip/",
+  "browserPlugin": "Browser plugin not available; project permits Chrome/Playwright",
+  "checks": [
+    {
+      "size": "desktop",
+      "route": "squad",
+      "layout": {
+        "family": "Georgia, Cambria, \"Times New Roman\", serif",
+        "weight": "400",
+        "size": "48px",
+        "visibleTitle": "Our crew",
+        "viewport": 1440,
+        "scrollWidth": 1440,
+        "titleBounds": {
+          "left": 274,
+          "right": 459.03125,
+          "top": 128,
+          "bottom": 176
+        },
+        "iconBounds": {
+          "left": 230,
+          "right": 262,
+          "top": 136,
+          "bottom": 168
+        }
+      },
+      "backdrop": {
+        "image": "url(\"http://127.0.0.1:4174/gradtrip/assets/graduation-group-960-BcjrClPI.webp\")",
+        "opacity": "0.22",
+        "pointerEvents": "none",
+        "mask": "radial-gradient(50% 50%, rgb(0, 0, 0) 48%, rgba(0, 0, 0, 0) 100%)",
+        "requests": [
+          {
+            "url": "http://127.0.0.1:4174/gradtrip/assets/graduation-group-960-BcjrClPI.webp",
+            "transfer": 35822
+          }
+        ]
+      },
+      "backgroundRequests": 1,
+      "errors": []
+    },
+    {
+      "size": "desktop",
+      "route": "plans",
+      "layout": {
+        "family": "Georgia, Cambria, \"Times New Roman\", serif",
+        "weight": "400",
+        "size": "48px",
+        "visibleTitle": "Trip ideas",
+        "viewport": 1440,
+        "scrollWidth": 1440,
+        "titleBounds": {
+          "left": 274,
+          "right": 474.1875,
+          "top": 120,
+          "bottom": 168
+        },
+        "iconBounds": {
+          "left": 230,
+          "right": 262,
+          "top": 128,
+          "bottom": 160
+        }
+      },
+      "backdrop": {
+        "image": "url(\"http://127.0.0.1:4174/gradtrip/assets/graduation-group-960-BcjrClPI.webp\")",
+        "opacity": "0.22",
+        "pointerEvents": "none",
+        "mask": "radial-gradient(50% 50%, rgb(0, 0, 0) 48%, rgba(0, 0, 0, 0) 100%)",
+        "requests": [
+          {
+            "url": "http://127.0.0.1:4174/gradtrip/assets/graduation-group-960-BcjrClPI.webp",
+            "transfer": 35822
+          }
+        ]
+      },
+      "backgroundRequests": 1,
+      "errors": []
+    },
+    {
+      "size": "desktop",
+      "route": "itinerary",
+      "layout": {
+        "family": "Georgia, Cambria, \"Times New Roman\", serif",
+        "weight": "400",
+        "size": "48px",
+        "visibleTitle": "Day by day",
+        "viewport": 1440,
+        "scrollWidth": 1440,
+        "titleBounds": {
+          "left": 274,
+          "right": 494.8125,
+          "top": 128,
+          "bottom": 176
+        },
+        "iconBounds": {
+          "left": 230,
+          "right": 262,
+          "top": 136,
+          "bottom": 168
+        }
+      },
+      "backdrop": {
+        "image": "url(\"http://127.0.0.1:4174/gradtrip/assets/graduation-group-960-BcjrClPI.webp\")",
+        "opacity": "0.22",
+        "pointerEvents": "none",
+        "mask": "radial-gradient(50% 50%, rgb(0, 0, 0) 48%, rgba(0, 0, 0, 0) 100%)",
+        "requests": [
+          {
+            "url": "http://127.0.0.1:4174/gradtrip/assets/graduation-group-960-BcjrClPI.webp",
+            "transfer": 35822
+          }
+        ]
+      },
+      "backgroundRequests": 1,
+      "errors": []
+    },
+    {
+      "size": "desktop",
+      "route": "ledger",
+      "layout": {
+        "family": "Georgia, Cambria, \"Times New Roman\", serif",
+        "weight": "400",
+        "size": "48px",
+        "visibleTitle": "Shared tab",
+        "viewport": 1440,
+        "scrollWidth": 1440,
+        "titleBounds": {
+          "left": 274,
+          "right": 490.71875,
+          "top": 132,
+          "bottom": 180
+        },
+        "iconBounds": {
+          "left": 230,
+          "right": 262,
+          "top": 140,
+          "bottom": 172
+        }
+      },
+      "backdrop": {
+        "image": "url(\"http://127.0.0.1:4174/gradtrip/assets/graduation-group-960-BcjrClPI.webp\")",
+        "opacity": "0.22",
+        "pointerEvents": "none",
+        "mask": "radial-gradient(50% 50%, rgb(0, 0, 0) 48%, rgba(0, 0, 0, 0) 100%)",
+        "requests": [
+          {
+            "url": "http://127.0.0.1:4174/gradtrip/assets/graduation-group-960-BcjrClPI.webp",
+            "transfer": 35822
+          }
+        ]
+      },
+      "backgroundRequests": 1,
+      "errors": []
+    },
+    {
+      "size": "tablet",
+      "route": "squad",
+      "layout": {
+        "family": "Georgia, Cambria, \"Times New Roman\", serif",
+        "weight": "400",
+        "size": "48px",
+        "visibleTitle": "Our crew",
+        "viewport": 768,
+        "scrollWidth": 768,
+        "titleBounds": {
+          "left": 220,
+          "right": 405.03125,
+          "top": 128,
+          "bottom": 176
+        },
+        "iconBounds": {
+          "left": 176,
+          "right": 208,
+          "top": 136,
+          "bottom": 168
+        }
+      },
+      "backdrop": {
+        "image": "url(\"http://127.0.0.1:4174/gradtrip/assets/graduation-group-960-BcjrClPI.webp\")",
+        "opacity": "0.22",
+        "pointerEvents": "none",
+        "mask": "radial-gradient(50% 50%, rgb(0, 0, 0) 48%, rgba(0, 0, 0, 0) 100%)",
+        "requests": [
+          {
+            "url": "http://127.0.0.1:4174/gradtrip/assets/graduation-group-960-BcjrClPI.webp",
+            "transfer": 35822
+          }
+        ]
+      },
+      "backgroundRequests": 1,
+      "errors": []
+    },
+    {
+      "size": "tablet",
+      "route": "plans",
+      "layout": {
+        "family": "Georgia, Cambria, \"Times New Roman\", serif",
+        "weight": "400",
+        "size": "48px",
+        "visibleTitle": "Trip ideas",
+        "viewport": 768,
+        "scrollWidth": 768,
+        "titleBounds": {
+          "left": 220,
+          "right": 420.1875,
+          "top": 120,
+          "bottom": 168
+        },
+        "iconBounds": {
+          "left": 176,
+          "right": 208,
+          "top": 128,
+          "bottom": 160
+        }
+      },
+      "backdrop": {
+        "image": "url(\"http://127.0.0.1:4174/gradtrip/assets/graduation-group-960-BcjrClPI.webp\")",
+        "opacity": "0.22",
+        "pointerEvents": "none",
+        "mask": "radial-gradient(50% 50%, rgb(0, 0, 0) 48%, rgba(0, 0, 0, 0) 100%)",
+        "requests": [
+          {
+            "url": "http://127.0.0.1:4174/gradtrip/assets/graduation-group-960-BcjrClPI.webp",
+            "transfer": 35822
+          }
+        ]
+      },
+      "backgroundRequests": 1,
+      "errors": []
+    },
+    {
+      "size": "tablet",
+      "route": "itinerary",
+      "layout": {
+        "family": "Georgia, Cambria, \"Times New Roman\", serif",
+        "weight": "400",
+        "size": "48px",
+        "visibleTitle": "Day by day",
+        "viewport": 768,
+        "scrollWidth": 768,
+        "titleBounds": {
+          "left": 220,
+          "right": 440.8125,
+          "top": 128,
+          "bottom": 176
+        },
+        "iconBounds": {
+          "left": 176,
+          "right": 208,
+          "top": 136,
+          "bottom": 168
+        }
+      },
+      "backdrop": {
+        "image": "url(\"http://127.0.0.1:4174/gradtrip/assets/graduation-group-960-BcjrClPI.webp\")",
+        "opacity": "0.22",
+        "pointerEvents": "none",
+        "mask": "radial-gradient(50% 50%, rgb(0, 0, 0) 48%, rgba(0, 0, 0, 0) 100%)",
+        "requests": [
+          {
+            "url": "http://127.0.0.1:4174/gradtrip/assets/graduation-group-960-BcjrClPI.webp",
+            "transfer": 35822
+          }
+        ]
+      },
+      "backgroundRequests": 1,
+      "errors": []
+    },
+    {
+      "size": "tablet",
+      "route": "ledger",
+      "layout": {
+        "family": "Georgia, Cambria, \"Times New Roman\", serif",
+        "weight": "400",
+        "size": "48px",
+        "visibleTitle": "Shared tab",
+        "viewport": 768,
+        "scrollWidth": 768,
+        "titleBounds": {
+          "left": 220,
+          "right": 436.71875,
+          "top": 132,
+          "bottom": 180
+        },
+        "iconBounds": {
+          "left": 176,
+          "right": 208,
+          "top": 140,
+          "bottom": 172
+        }
+      },
+      "backdrop": {
+        "image": "url(\"http://127.0.0.1:4174/gradtrip/assets/graduation-group-960-BcjrClPI.webp\")",
+        "opacity": "0.22",
+        "pointerEvents": "none",
+        "mask": "radial-gradient(50% 50%, rgb(0, 0, 0) 48%, rgba(0, 0, 0, 0) 100%)",
+        "requests": [
+          {
+            "url": "http://127.0.0.1:4174/gradtrip/assets/graduation-group-960-BcjrClPI.webp",
+            "transfer": 35822
+          }
+        ]
+      },
+      "backgroundRequests": 1,
+      "errors": []
+    },
+    {
+      "size": "mobile",
+      "route": "squad",
+      "layout": {
+        "family": "Georgia, Cambria, \"Times New Roman\", serif",
+        "weight": "400",
+        "size": "30px",
+        "visibleTitle": "Our crew",
+        "viewport": 375,
+        "scrollWidth": 375,
+        "titleBounds": {
+          "left": 52,
+          "right": 167.640625,
+          "top": 117,
+          "bottom": 153
+        },
+        "iconBounds": {
+          "left": 16,
+          "right": 40,
+          "top": 123,
+          "bottom": 147
+        }
+      },
+      "backdrop": {
+        "image": "url(\"http://127.0.0.1:4174/gradtrip/assets/graduation-group-480-DB9zgAyZ.webp\")",
+        "opacity": "0.22",
+        "pointerEvents": "none",
+        "mask": "radial-gradient(50% 50%, rgb(0, 0, 0) 48%, rgba(0, 0, 0, 0) 100%)",
+        "requests": [
+          {
+            "url": "http://127.0.0.1:4174/gradtrip/assets/graduation-group-480-DB9zgAyZ.webp",
+            "transfer": 13638
+          }
+        ]
+      },
+      "backgroundRequests": 1,
+      "errors": []
+    },
+    {
+      "size": "mobile",
+      "route": "plans",
+      "layout": {
+        "family": "Georgia, Cambria, \"Times New Roman\", serif",
+        "weight": "400",
+        "size": "30px",
+        "visibleTitle": "Trip ideas",
+        "viewport": 375,
+        "scrollWidth": 375,
+        "titleBounds": {
+          "left": 52,
+          "right": 177.125,
+          "top": 117,
+          "bottom": 153
+        },
+        "iconBounds": {
+          "left": 16,
+          "right": 40,
+          "top": 123,
+          "bottom": 147
+        }
+      },
+      "backdrop": {
+        "image": "url(\"http://127.0.0.1:4174/gradtrip/assets/graduation-group-480-DB9zgAyZ.webp\")",
+        "opacity": "0.22",
+        "pointerEvents": "none",
+        "mask": "radial-gradient(50% 50%, rgb(0, 0, 0) 48%, rgba(0, 0, 0, 0) 100%)",
+        "requests": [
+          {
+            "url": "http://127.0.0.1:4174/gradtrip/assets/graduation-group-480-DB9zgAyZ.webp",
+            "transfer": 13638
+          }
+        ]
+      },
+      "backgroundRequests": 1,
+      "errors": []
+    },
+    {
+      "size": "mobile",
+      "route": "itinerary",
+      "layout": {
+        "family": "Georgia, Cambria, \"Times New Roman\", serif",
+        "weight": "400",
+        "size": "30px",
+        "visibleTitle": "Day by day",
+        "viewport": 375,
+        "scrollWidth": 375,
+        "titleBounds": {
+          "left": 52,
+          "right": 190.015625,
+          "top": 117,
+          "bottom": 153
+        },
+        "iconBounds": {
+          "left": 16,
+          "right": 40,
+          "top": 123,
+          "bottom": 147
+        }
+      },
+      "backdrop": {
+        "image": "url(\"http://127.0.0.1:4174/gradtrip/assets/graduation-group-480-DB9zgAyZ.webp\")",
+        "opacity": "0.22",
+        "pointerEvents": "none",
+        "mask": "radial-gradient(50% 50%, rgb(0, 0, 0) 48%, rgba(0, 0, 0, 0) 100%)",
+        "requests": [
+          {
+            "url": "http://127.0.0.1:4174/gradtrip/assets/graduation-group-480-DB9zgAyZ.webp",
+            "transfer": 13638
+          }
+        ]
+      },
+      "backgroundRequests": 1,
+      "errors": []
+    },
+    {
+      "size": "mobile",
+      "route": "ledger",
+      "layout": {
+        "family": "Georgia, Cambria, \"Times New Roman\", serif",
+        "weight": "400",
+        "size": "30px",
+        "visibleTitle": "Shared tab",
+        "viewport": 375,
+        "scrollWidth": 375,
+        "titleBounds": {
+          "left": 52,
+          "right": 187.453125,
+          "top": 117,
+          "bottom": 153
+        },
+        "iconBounds": {
+          "left": 16,
+          "right": 40,
+          "top": 123,
+          "bottom": 147
+        }
+      },
+      "backdrop": {
+        "image": "url(\"http://127.0.0.1:4174/gradtrip/assets/graduation-group-480-DB9zgAyZ.webp\")",
+        "opacity": "0.22",
+        "pointerEvents": "none",
+        "mask": "radial-gradient(50% 50%, rgb(0, 0, 0) 48%, rgba(0, 0, 0, 0) 100%)",
+        "requests": [
+          {
+            "url": "http://127.0.0.1:4174/gradtrip/assets/graduation-group-480-DB9zgAyZ.webp",
+            "transfer": 13638
+          }
+        ]
+      },
+      "backgroundRequests": 1,
+      "errors": []
+    },
+    {
+      "size": "mobile",
+      "route": "plans",
+      "confirmedAndReconfirm": "passed",
+      "errors": []
+    },
+    {
+      "backgroundImageFailure": "expected abort",
+      "editAndNavigationWithoutImage": "passed",
+      "errors": []
+    }
+  ]
+}

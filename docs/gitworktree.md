@@ -108,7 +108,7 @@ npm ci
 | --- | --- |
 | T01 工程与公共层 | package.json、package-lock.json、index.html、所有根工程配置、`.github/**`、`scripts/**`、`src/main.tsx`、`src/contracts/**`、`src/components/**`、`src/styles/**` |
 | T01 应用与持久化 | `src/app/**`（排除下述 T04 文件）、`src/infrastructure/repository.ts`、`migrations.ts`、`notifications.ts`、`src/domain/types.ts`、`schema.ts`、`commands.ts`、`money.ts`、`dates.ts` |
-| T01 汇总与交付 | `src/data/demo.ts`、`src/data/assetManifest.ts`、`public/**`、`README.md`、`docs/ACCEPTANCE.md`、`docs/assets/SOURCES.md`、`tests/helpers/**`、基础/存储/全流程测试 |
+| T01 汇总与交付 | `src/data/demo.ts`、当时的assetManifest（最终整理已移除未使用的旧清单）、`public/**`、`README.md`、`docs/ACCEPTANCE.md`、`docs/assets/SOURCES.md`、`tests/helpers/**`、基础/存储/全流程测试 |
 | T02 小队与方案 | `src/features/squad/**`、`src/features/plans/**`、`src/domain/planning/**`、`src/data/destinations.ts`、`transport.ts`、`templates/**`、`demoPlanning.ts`、`assetsPlanning.ts`、`src/assets/destinations/**` |
 | T03 日程与财务 | `src/features/itinerary/**`、`src/features/ledger/**`、`src/domain/itinerary/**`、`src/domain/ledger/**`、`src/data/demoLedger.ts` |
 | T04 分享与导入 | `src/features/sharing/**`、`src/domain/sharing/**`、`src/infrastructure/transfer.ts`、`src/app/application/sharing.ts` |

@@ -54,4 +54,4 @@ export function Status({ status }: { status: SaveStatus }) {
   return <span role="status" aria-label="保存状态" title={statuses[status]} className={`save-status status-${status}`}><Icon size={18} aria-hidden="true"/>{status === 'saved' ? <><span aria-hidden="true">本地保存</span><span className="sr-only">{statuses[status]}</span></> : statuses[status]}</span>;
 }
 export function ErrorNotice({ children }: { children: ReactNode }) { return <div role="alert" className="error-notice">{children}</div>; }
-export { StatusChip, Avatar, TagChip, PageHeader, Sheet, StatStrip, Stat, Notice, Brand, ActionMenu, SegmentedControl } from './presentation';
+export { StatusChip, Avatar, PageHeader, Brand, ActionMenu } from './presentation';

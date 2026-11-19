@@ -54,7 +54,7 @@ p { text-wrap: pretty; }
 .menu-items > * { justify-content: flex-start; white-space: nowrap; }
 .skip-link { position: fixed; left: 16px; top: -80px; z-index: 10; background: var(--surface); padding: 12px; }
 .skip-link:focus { top: 8px; }
-.shell { display: grid; grid-template-columns: var(--sidebar-w) minmax(0,1fr); min-height: 100dvh; }
+.shell { display: grid; grid-template-columns: var(--sidebar-w) minmax(0,1fr); min-height: 100dvh; isolation: isolate; }
 .sidebar { position: sticky; top: 0; height: 100dvh; border-right: 1px solid var(--line); padding: 28px 14px; display: flex; flex-direction: column; gap: 52px; }
 .brand { display: flex; gap: 10px; align-items: center; padding-inline: 12px; font: 750 28px/32px var(--font-sans); color: var(--ink-900); text-decoration: none; }
 .brand-mark { width: 40px; height: 30px; object-fit: contain; flex: 0 0 40px; }
@@ -62,7 +62,9 @@ p { text-wrap: pretty; }
 .nav-link { display: flex; gap: 16px; align-items: center; padding: 15px 18px; min-height: 58px; border-radius: 14px; color: var(--ink-900); text-decoration: none; font-size: 20px; font-weight: 500; }
 .nav-link:hover { color: var(--violet-700); background: var(--violet-50); }
 .nav-link.active { color: var(--violet-700); background: var(--violet-100); font-weight: 650; }
-.workspace { min-width: 0; }
+.workspace { min-width: 0; position: relative; }
+.workspace::before { content: ''; position: absolute; z-index: -1; top: var(--topbar-h); right: clamp(96px, 15vw, 240px); width: 480px; height: 270px; pointer-events: none; background: url('../assets/backgrounds/graduation-group-960.webp') center / cover no-repeat; opacity: .22; mask-image: radial-gradient(ellipse 50% 50% at center, #000 48%, transparent 100%); }
+.workspace .page-header p, .workspace .page-actions .button-ghost { color: var(--ink-700); }
 .topbar { height: var(--topbar-h); padding: 12px var(--page-pad); border-bottom: 1px solid var(--line); display: flex; justify-content: space-between; align-items: center; gap: 16px; }
 .trip-switch { display: flex; align-items: center; gap: 16px; flex: 1; min-width: 0; }
 .topbar .field { margin: 0; min-width: 0; width: 320px; max-width: 100%; }
@@ -103,6 +105,7 @@ legend { font: var(--text-data); font-weight: 600; padding-right: 12px; }
  .trip-switch { gap: 8px; } .topbar .field { width: 260px; }
 }
 @media (max-width: 767px) {
+ .workspace::before { right: 0; width: 100%; height: 220px; background-image: url('../assets/backgrounds/graduation-group-480.webp'); }
  :root { --page-pad: 16px; --topbar-h: 64px; }
  .shell { display: block; padding-bottom: calc(var(--tabbar-h) + env(safe-area-inset-bottom)); }
  .sidebar { position: absolute; height: 64px; padding: 0; border: 0; left: 16px; top: 0; justify-content: center; z-index: var(--z-nav); }

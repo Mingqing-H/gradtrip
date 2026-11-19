@@ -23,7 +23,7 @@ test('create, rename, refresh, restore last workspace, keyboard dialog and delet
   await expect(page.getByRole('combobox', { name: '选择旅行' })).toContainText('一起去海边');
   await page.getByRole('link', { name: '账本', exact: true }).click();
   await page.reload();
-  await expect(page.getByRole('heading', { name: '账本', exact: true })).toBeVisible();
+  await expect(page.getByRole('heading', { name: '账本 · Shared tab', exact: true })).toBeVisible();
   await page.goto('./');
   await expect(page).toHaveURL(/\/ledger$/);
   await menu(page, '重命名');
@@ -45,7 +45,7 @@ test('no horizontal overflow and meaningful navigation at target viewport', asyn
   const nav = page.getByRole('navigation', { name: '工作区' });
   await expect(nav.getByRole('link')).toHaveCount(4);
   await page.getByRole('link', { name: '日程', exact: true }).click();
-  await expect(page.getByRole('heading', { name: '日程', exact: true })).toBeVisible();
+  await expect(page.getByRole('heading', { name: '日程 · Day by day', exact: true })).toBeVisible();
   await expect(nav.getByRole('link', { name: '日程', exact: true })).toHaveAttribute('aria-current', 'page');
 });
 test('a stale tab keeps a form draft and cannot overwrite the updated trip', async ({ page, context }) => {

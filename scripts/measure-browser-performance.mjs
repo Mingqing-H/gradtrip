@@ -19,7 +19,7 @@ try {
         new PerformanceObserver(list => { for (const entry of list.getEntries()) if (!entry.hadRecentInput) window.__performanceReport.cls += entry.value; }).observe({ type: 'layout-shift', buffered: true });
       });
       await page.goto(base, { waitUntil: 'networkidle' });
-      await page.getByRole('heading', { level: 1 }).filter({ hasText: '小队' }).waitFor();
+      await page.getByRole('heading', { level: 1, name: '小队 · Our crew', exact: true }).waitFor();
       runs.push(await page.evaluate(() => ({ ...window.__performanceReport,
         transferBytes: [...performance.getEntriesByType('navigation'), ...performance.getEntriesByType('resource')].reduce((sum, entry) => sum + entry.transferSize, 0),
         viewport: innerWidth, scrollWidth: document.documentElement.scrollWidth,

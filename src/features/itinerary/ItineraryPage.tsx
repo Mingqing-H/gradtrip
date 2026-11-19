@@ -7,6 +7,7 @@
 import { useMemo, useState, useRef } from 'react';
 import {
   CalendarPlus,
+  Route,
   ChevronDown,
   ChevronUp,
   MessageSquare, Clock3,
@@ -194,7 +195,7 @@ export function ItineraryPage({ trip, execute, services }: WorkspaceProps) {
 
   return (
     <section className={styles.page}>
-      <PageHeader title="日程" subtitle={dateRange ? dateRange.start.replaceAll('-', '.') + ' — ' + dateRange.end.slice(5).replace('-', '.') + ' · ' + groups.length + ' 天' : undefined} actions={<Button className="mobile-primary" onClick={() => openCreate(dateRange?.start ?? trip.searchWindow.start)} disabled={busy}><CalendarPlus size={20}/>添加安排</Button>}/>
+      <PageHeader label="日程" title={<span lang="en">Day by day</span>} icon={<Route/>} subtitle={dateRange ? dateRange.start.replaceAll('-', '.') + ' — ' + dateRange.end.slice(5).replace('-', '.') + ' · ' + groups.length + ' 天' : undefined} actions={<Button className="mobile-primary" onClick={() => openCreate(dateRange?.start ?? trip.searchWindow.start)} disabled={busy}><CalendarPlus size={20}/>添加安排</Button>}/>
       {groups.length > 0 && <nav className={styles.dayNav} aria-label="日程日期">{groups.map((group, index) => <button key={group.date} onClick={() => dayRefs.current[group.date]?.scrollIntoView({ block: 'start' })}>第 {index + 1} 天 <span>{group.date.slice(5)}</span></button>)}</nav>}
       {error !== null && <ErrorNotice>{error}</ErrorNotice>}
       {outOfRange.length > 0 && (

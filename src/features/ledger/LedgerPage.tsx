@@ -4,7 +4,7 @@
  * 页面只调用 execute 与领域查询，不自行实现分摊/余额/建议算法。
  */
 import { useMemo, useState } from 'react';
-import { ArrowRight, ChevronDown, Plus, Receipt, RotateCcw, ShieldAlert } from 'lucide-react';
+import { ArrowRight, ChevronDown, Plus, Receipt, RotateCcw, ShieldAlert, Coins } from 'lucide-react';
 import { Button, Dialog, Drawer, ErrorNotice, Input, Select, PageHeader, Avatar, StatusChip } from '../../components/ui';
 import { formatMoney, parseMoney } from '../../domain/money';
 import { getLedgerSummary } from '../../domain/ledger/balances';
@@ -280,7 +280,7 @@ export function LedgerPage({ trip, execute }: WorkspaceProps) {
   if (trip.members.length === 0) {
     return (
       <section className={styles.page}>
-        <h1>账本</h1>
+        <PageHeader label="账本" title={<span lang="en">Shared tab</span>} icon={<Coins/>}/>
         <div className="empty-state">
           <h2>还没有小队成员</h2>
           <p className="muted">请先在“小队”添加成员，再记录实际费用。</p>
@@ -291,7 +291,7 @@ export function LedgerPage({ trip, execute }: WorkspaceProps) {
 
   return (
     <section className={styles.page}>
-      <PageHeader title="账本" actions={<Button className="mobile-primary" onClick={openCreate} disabled={busy || summary.hasActiveSettlement}><Plus size={20}/>记一笔</Button>}/>
+      <PageHeader label="账本" title={<span lang="en">Shared tab</span>} icon={<Coins/>} actions={<Button className="mobile-primary" onClick={openCreate} disabled={busy || summary.hasActiveSettlement}><Plus size={20}/>记一笔</Button>}/>
 
       <div className={styles.tabs} role="tablist" aria-label="账本视图" onKeyDown={event => { if (['ArrowLeft', 'ArrowRight', 'Home', 'End'].includes(event.key)) { event.preventDefault(); const next = event.key === 'Home' ? 'expenses' : event.key === 'End' ? 'settlement' : tab === 'expenses' ? 'settlement' : 'expenses'; setTab(next); event.currentTarget.querySelector<HTMLButtonElement>(next === 'expenses' ? '#expenses-tab' : '#settlement-tab')?.focus(); } }}>
         <button

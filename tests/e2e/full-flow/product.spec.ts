@@ -16,7 +16,7 @@ async function readTrip(page: Page, id = 'demo-trip'): Promise<Trip | null> {
   }), id);
 }
 function decodeLink(url: string) { const encoded = new URLSearchParams(new URL(url).hash.split('?')[1]).get('data')!; return JSON.parse(Buffer.from(encoded, 'base64url').toString('utf8')); }
-async function demo(page: Page) { await page.goto('./'); await expect(page.getByRole('heading', { level: 1 })).toContainText('小队'); await expect(page.getByRole('button', { name: '编辑 周予安', exact: true })).toBeVisible(); }
+async function demo(page: Page) { await page.goto('./'); await expect(page.getByRole('heading', { level: 1 })).toHaveAccessibleName('小队 · Our crew'); await expect(page.getByRole('button', { name: '编辑 周予安', exact: true })).toBeVisible(); }
 
 test('demo consensus, itinerary budget, partial expense allocation and settlement correction', async ({ page }) => {
   const errors: string[] = []; page.on('pageerror', error => errors.push(error.message));
@@ -30,7 +30,7 @@ test('demo consensus, itinerary budget, partial expense allocation and settlemen
   await member.getByRole('button', { name: '赞成', exact: true }).click();
   await expect(dialog.getByRole('button', { name: '确认此方案' })).toBeEnabled();
   await dialog.getByRole('button', { name: '确认此方案' }).click();
-  await expect(page.getByRole('heading', { level: 1 })).toContainText('已确认');
+  await expect(page.locator('.page-header .status-chip')).toHaveText('已确认');
   await dialog.getByRole('button', { name: '关闭', exact: true }).first().click();
   await page.getByRole('link', { name: '日程', exact: true }).click();
   await page.getByRole('button', { name: '添加安排', exact: true }).first().click();
@@ -118,7 +118,7 @@ test('isolated invitation response, duplicate preview, backup overwrite, recover
     const backup = JSON.parse(file.toString('utf8'));
     expect(backup.body.trip.members[2].budgetCap).toBe(170000);
     const receiver = await receiverContext.newPage(); await receiver.goto(new URL('.', inviteLink).href);
-    await expect(receiver.getByRole('heading', { level: 1 })).toContainText('小队');
+    await expect(receiver.getByRole('heading', { level: 1 })).toHaveAccessibleName('小队 · Our crew');
     expect((await readTrip(receiver))?.members[2].budgetCap).toBe(160000);
     await openMenu(receiver, '导入');
     await receiver.getByLabel('选择 JSON 文件').setInputFiles({ name: 'backup.json', mimeType: 'application/json', buffer: file });
@@ -169,7 +169,7 @@ test('public snapshot stays read-only until copied, and excludes private members
     await viewer.reload();
     await expect(viewer.getByText('只读快照', { exact: true })).toBeVisible();
     await viewer.getByRole('button', { name: '另存为我的旅行', exact: true }).click();
-    await expect(viewer.getByRole('heading', { level: 1 })).toContainText('小队');
+    await expect(viewer.getByRole('heading', { level: 1 })).toHaveAccessibleName('小队 · Our crew');
     const copiedId = viewer.url().split('/trip/')[1].split('/')[0];
     const copied = await readTrip(viewer, copiedId);
     expect(copied?.members).toHaveLength(0);
@@ -187,7 +187,7 @@ test('a draft itinerary uses the explicit date range selected in its first activ
   await page.getByLabel('旅行名称', { exact: true }).fill('草稿日期验收');
   await page.getByRole('dialog').getByRole('button', { name: '创建旅行', exact: true }).click();
   await expect(page.getByRole('dialog')).not.toBeVisible();
-  await expect(page.getByRole('heading', { level: 1 })).toContainText('小队');
+  await expect(page.getByRole('heading', { level: 1 })).toHaveAccessibleName('小队 · Our crew');
   const id = page.url().split('/trip/')[1].split('/')[0];
   const draft = await readTrip(page, id);
   const start = addDays(draft!.searchWindow.start, 2);

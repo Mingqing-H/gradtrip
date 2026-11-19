@@ -4,7 +4,7 @@ import { localDateOnly, isDateOnly } from '../../domain/dates';
 // P02 方案工作区：筛选、候选比较、方案详情（成员适配/估算/意向/确认）。
 // 所有业务查询通过 services.planning，所有写入通过 execute（扁平 CommandPayload）。
 import { useId, useMemo, useRef, useState } from 'react';
-import { TriangleAlert, CalendarDays, Search, ChevronDown, ArrowRight } from 'lucide-react';
+import { TriangleAlert, CalendarDays, Search, ChevronDown, ArrowRight, Compass } from 'lucide-react';
 import { Button, Drawer, ErrorNotice, Input, Select, PageHeader, StatusChip, Avatar } from '../../components/ui';
 import type { Id, WorkspaceProps } from '../../contracts/services';
 import type { IntentValue, Plan } from '../../domain/types';
@@ -186,7 +186,7 @@ export function PlansPage({ trip, execute, services, openShare }: WorkspaceProps
 
   return (
     <div className={styles.plansPage}>
-      <PageHeader title={<>方案 {statusKind !== 'preparing' ? <StatusChip tone={statusKind === 'confirmed' ? 'success' : 'warning'}>{statusText}</StatusChip> : null}</>} subtitle={sortedPlans.length + ' 个候选 · ' + evaluations.filter(e => e.feasible).length + ' 个全员可行'} actions={<Button onClick={generatePlans} disabled={busy || trip.members.length === 0} aria-busy={busy}><Search size={20}/>{busy ? '生成中…' : '生成方案'}</Button>}/>
+      <PageHeader label="方案" icon={<Compass/>} title={<span lang="en">Trip ideas</span>} subtitle={<>{sortedPlans.length + ' 个候选 · ' + evaluations.filter(e => e.feasible).length + ' 个全员可行'}{statusKind !== 'preparing' ? <StatusChip tone={statusKind === 'confirmed' ? 'success' : 'warning'}>{statusText}</StatusChip> : null}</>} actions={<Button onClick={generatePlans} disabled={busy || trip.members.length === 0} aria-busy={busy}><Search size={20}/>{busy ? '生成中…' : '生成方案'}</Button>}/>
       <div className={styles.filterBar}>
         <Select label="出发日期" value={departure} onChange={event => setDeparture(event.target.value)}><option value="">自动（共同日期）</option>{commonDates.map(date => <option key={date} value={date}>{date}</option>)}</Select>
         <Select label="出行时长" value={duration} onChange={event => setDuration(event.target.value)}>{[2,3,4,5].map(days => <option key={days} value={days}>{days}天{days - 1}晚</option>)}</Select>

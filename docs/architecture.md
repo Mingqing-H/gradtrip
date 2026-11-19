@@ -142,7 +142,7 @@ scripts/
 tests/
   domain/ integration/ e2e/
 public/
-  favicon.svg
+  favicon.png
   THIRD_PARTY_NOTICES.txt
 docs/
   assets/                   # 素材来源记录，实施阶段创建
@@ -353,7 +353,7 @@ Sharp 仅在素材处理或构建阶段运行，压缩后的图片是最终浏�
 
 ### 10.4 来源清单与资产引用
 
-实施时新增 `docs/assets/SOURCES.md` 记录人工可读来源，另以 `src/data/assetManifest.ts` 管理运行时引用：
+`docs/assets/SOURCES.md`记录人工可读来源；目的地运行时引用由`src/data/assetsPlanning.ts`管理，头像、品牌、日程插画和毕业背景在使用处通过Vite静态资源引用。最终版已删除未被使用的旧assetManifest，避免维护两套清单。来源记录涵盖以下信息：
 
 | 字段 | 说明 |
 | --- | --- |
@@ -366,7 +366,7 @@ Sharp 仅在素材处理或构建阶段运行，压缩后的图片是最终浏�
 | generator / prompt / generatedAt | 生成图片的工具、提示词和日期，记录在文档侧 |
 | processedAt | 压缩处理日期 |
 
-运行时 manifest 只包含界面需要的文件和说明，长提示词等制作记录不打包到首屏。应保留的开源许可写入随站交付的 `public/THIRD_PARTY_NOTICES.txt`，需要署名的图片在可访问的素材来源说明中落实，不堆到每张卡片旁。
+运行时引用只包含界面需要的文件和说明，长提示词等制作记录不打包到首屏。应保留的开源许可写入随站交付的 `public/THIRD_PARTY_NOTICES.txt`，需要署名的图片在可访问的素材来源说明中落实，不堆到每张卡片旁。
 
 ## 11. 性能设计
 
