@@ -1,17 +1,21 @@
 # 实际验收记录
 
-## Design v3 发布准备（2026-11-19）
+## Design v3 公开发布（2026-11-19）
 
-用户已授权提交并部署到固定 GitHub Pages。原始浏览器数据、领域失败轮与本次修复后的记录全部保留，不删除冷轮、不修改门槛。此前视觉改版初验中的发布阻塞已通过针对重复计算的优化解决；本节发布记录优先于下文初验状态。
+已提交并发布到固定地址 [同路 · 毕业旅行](https://mingqing-h.github.io/gradtrip/)。线上代码为 [4bc8d81](https://github.com/Mingqing-H/gradtrip/commit/4bc8d81a03971cca9da53be8ad272734c27d8deb)，[验证及部署工作流](https://github.com/Mingqing-H/gradtrip/actions/runs/44444869494)全部成功。回退标签pre-design-v3-20261119指向本轮发布前的main（519162b），未更改数据schema、数据库名称或站点地址。
+
+功能、视觉、资源体积与领域冷计算通过；**线上弱网LCP中位数2568ms，仍超过2500ms目标68ms，性能门槛未全部达成**。不将部署成功视为所有质量门槛通过。原始失败轮和修复后的记录均保留，没有删除冷轮、预热或修改门槛。本节优先于下文历史初验状态。
 
 - 性能修复：同方案结束日期计算一次；单方案意向索引按成员组织，保留方案/版本/约束版本隔离与最新时间尾序；日期校验不分配捕获数组。没有全局可变缓存，数据结构与持久化版本均未变化。
 - 最终领域压力测试：20人/20方案/200费用、4倍CPU、20轮含冷轮，中位数8.35ms，最大48.6ms，通过50ms门槛。原始记录：[最终结果](./validation/design-v3/domain-performance-release.json)；中间改动的失败记录：[结束日期批量计算](./validation/design-v3/domain-performance-batch.json)、[局部索引](./validation/design-v3/domain-performance-index.json)。诊断采样仅用于定位，未充当通过证据。
-- 最终 typecheck、lint、372项单测、独立集成检查、生产构建与体积检查通过。主入口JS gzip160.73KiB，最大分享入口171.41KiB，最大CSS8.31KiB。
-- 三尺寸E2E最终33/33通过（1.5分钟）；公开部署执行后补充线上结果。
+- 最终 typecheck、lint、372项单测、独立集成检查、生产构建与体积检查通过。主入口JS gzip160.74KiB，最大分享入口171.42KiB，最大CSS8.31KiB。
+- 三尺寸E2E最终33/33通过（本地1.5分钟），最新代码的GitHub工作流再次执行完整回归并成功部署。
 - 最终本地生产构建的三次独立冷加载：LCP2524/2452/2388ms，中位数2452ms；CLS最大0.0531095；首屏194107bytes（189.56KiB），宽度375无溢出，按既定中位数门槛通过。[原始记录](./validation/design-v3/browser-performance-release-local.json)。
 - 首次发布代码be05e95的[GitHub Actions](https://github.com/Mingqing-H/gradtrip/actions/runs/44442977349)验证及部署成功。公开站点匿名四页×三尺寸、Hash刷新、图片、无错误无溢出共12组合通过；线上三个完整流程通过：共识/日程/分摊结算、隔离邀请反馈与备份恢复、只读快照。入口index-BJ9idEKU.js与本地构建一致。[原始记录](./validation/design-v3/online-smoke-first.json)。内置浏览器创建标签超时，按项目允许的Chrome自动回归完成线上验收。
 - 首次线上弱网性能LCP2984/3536/2508ms，中位数2984ms，未满足2500ms；CLS0.0531095、传输194650bytes通过。[失败原始记录](./validation/design-v3/browser-performance-online-first.json)。进一步诊断看到文档首字节约538ms、主脚本首字节约952ms，以及启动时校验和布局开销；该诊断不作为通过证据。
-- 后续启用Zod已有的jitless模式，避免初次读取本地数据时编译每个schema，不改变任何字段与跨字段规则。该修改本地三次冷加载LCP2480/2276/2288ms，中位数2288ms，CLS最大0.0352669，首屏194119bytes。[原始记录](./validation/design-v3/browser-performance-jitless-local.json)。公开部署后再记录实际结果，不以本地结果代替线上验收。
+- 后续启用Zod已有的jitless模式，避免初次读取本地数据时编译每个schema，不改变任何字段与跨字段规则。该修改本地三次冷加载LCP2480/2276/2288ms，中位数2288ms，CLS最大0.0352669，首屏194119bytes。[原始记录](./validation/design-v3/browser-performance-jitless-local.json)。本地结果与下列线上结果分开记录。
+- 优化后公开站点最终三次冷加载LCP3040/2568/2508ms，中位数2568ms，未通过2500ms；CLS最大0.0531095、首屏194670bytes（190.11KiB）、375px无溢出均通过。[最终原始记录](./validation/design-v3/browser-performance-online.json)。环境仍为Chrome157、375×812、4倍CPU、1.6Mbps下载、750Kbps上传、150ms延迟、禁用缓存的三个独立冷上下文，测量时没有并行本地构建或E2E。未通过的线上加载目标保留为后续优化项。
+- 最终公开构建入口index-D9RLUU2t.js与本地dist一致，匿名四页×三尺寸共12组合再次通过，所有Hash子路由刷新正常，无控制台/页面错误、无资源4xx、无横向溢出，可见图片加载完成。[最终线上检查](./validation/design-v3/online-smoke.json)。三个线上完整流程再次3/3通过（28.4秒），验证共识、日程、分摊结算及撤销、隔离邀请回传、备份覆盖恢复与只读快照。
 
 ## Design v3：按 3 / 6 / 9 / 12 选稿实施（2026-11-19）
 
@@ -60,9 +64,9 @@ LCP中位数2396ms，CLS最差0.0531095，首屏189.41KiB；三轮宽度均375�
 
 原始记录：[首测](./validation/design-v3/domain-performance-first.json)、[单独复测](./validation/design-v3/domain-performance-isolated.json)。这项发布阻塞保留；本次用户请求为四页视觉改版，没有为追逐压测数值扩大修改业务算法的范围。
 
-### 发布状态
+### 初验时的发布状态（历史）
 
-当前修改仅在工作区与本地预览，线上仍为既有版本。正式发布前先解决领域冷计算门槛，再在固定Pages地址验证匿名访问、子路径和线上性能。
+初验当时修改仅在工作区与本地预览，线上为既有版本；后续已修复领域冷计算并正式发布。当前公开地址、版本、线上验证与仍未达到的LCP目标以上方发布记录为准。
 
 ## Design v2 UI/UX 重构（2026-11-18，本地生产构建）
 
