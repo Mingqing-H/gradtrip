@@ -1,0 +1,105 @@
+{
+  "url": "https://mingqing-h.github.io/gradtrip/",
+  "checkedAt": "2026-11-19T02:19:10.333Z",
+  "deployedEntry": "/gradtrip/assets/index-BJ9idEKU.js",
+  "localEntry": "/gradtrip/assets/index-BJ9idEKU.js",
+  "anonymous": true,
+  "checks": [
+    {
+      "size": "desktop",
+      "route": "squad",
+      "url": "https://mingqing-h.github.io/gradtrip/#/trip/demo-trip/squad",
+      "viewport": 1440,
+      "scrollWidth": 1440,
+      "errors": []
+    },
+    {
+      "size": "desktop",
+      "route": "plans",
+      "url": "https://mingqing-h.github.io/gradtrip/#/trip/demo-trip/plans",
+      "viewport": 1440,
+      "scrollWidth": 1440,
+      "errors": []
+    },
+    {
+      "size": "desktop",
+      "route": "itinerary",
+      "url": "https://mingqing-h.github.io/gradtrip/#/trip/demo-trip/itinerary",
+      "viewport": 1440,
+      "scrollWidth": 1440,
+      "errors": []
+    },
+    {
+      "size": "desktop",
+      "route": "ledger",
+      "url": "https://mingqing-h.github.io/gradtrip/#/trip/demo-trip/ledger",
+      "viewport": 1440,
+      "scrollWidth": 1440,
+      "errors": []
+    },
+    {
+      "size": "tablet",
+      "route": "squad",
+      "url": "https://mingqing-h.github.io/gradtrip/#/trip/demo-trip/squad",
+      "viewport": 768,
+      "scrollWidth": 768,
+      "errors": []
+    },
+    {
+      "size": "tablet",
+      "route": "plans",
+      "url": "https://mingqing-h.github.io/gradtrip/#/trip/demo-trip/plans",
+      "viewport": 768,
+      "scrollWidth": 768,
+      "errors": []
+    },
+    {
+      "size": "tablet",
+      "route": "itinerary",
+      "url": "https://mingqing-h.github.io/gradtrip/#/trip/demo-trip/itinerary",
+      "viewport": 768,
+      "scrollWidth": 768,
+      "errors": []
+    },
+    {
+      "size": "tablet",
+      "route": "ledger",
+      "url": "https://mingqing-h.github.io/gradtrip/#/trip/demo-trip/ledger",
+      "viewport": 768,
+      "scrollWidth": 768,
+      "errors": []
+    },
+    {
+      "size": "mobile",
+      "route": "squad",
+      "url": "https://mingqing-h.github.io/gradtrip/#/trip/demo-trip/squad",
+      "viewport": 375,
+      "scrollWidth": 375,
+      "errors": []
+    },
+    {
+      "size": "mobile",
+      "route": "plans",
+      "url": "https://mingqing-h.github.io/gradtrip/#/trip/demo-trip/plans",
+      "viewport": 375,
+      "scrollWidth": 375,
+      "errors": []
+    },
+    {
+      "size": "mobile",
+      "route": "itinerary",
+      "url": "https://mingqing-h.github.io/gradtrip/#/trip/demo-trip/itinerary",
+      "viewport": 375,
+      "scrollWidth": 375,
+      "errors": []
+    },
+    {
+      "size": "mobile",
+      "route": "ledger",
+      "url": "https://mingqing-h.github.io/gradtrip/#/trip/demo-trip/ledger",
+      "viewport": 375,
+      "scrollWidth": 375,
+      "errors": []
+    }
+  ]
+}

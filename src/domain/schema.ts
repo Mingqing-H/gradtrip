@@ -1,4 +1,6 @@
 import { z } from 'zod';
+// Avoid compiling every schema on first local-database access; retain the same checks.
+z.config({ jitless: true });
 import { isDateOnly } from './dates';
 import type { Trip } from './types';
 import type { BusinessError, Result } from '../contracts/result';

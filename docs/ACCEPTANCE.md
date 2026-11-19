@@ -9,6 +9,9 @@
 - 最终 typecheck、lint、372项单测、独立集成检查、生产构建与体积检查通过。主入口JS gzip160.73KiB，最大分享入口171.41KiB，最大CSS8.31KiB。
 - 三尺寸E2E最终33/33通过（1.5分钟）；公开部署执行后补充线上结果。
 - 最终本地生产构建的三次独立冷加载：LCP2524/2452/2388ms，中位数2452ms；CLS最大0.0531095；首屏194107bytes（189.56KiB），宽度375无溢出，按既定中位数门槛通过。[原始记录](./validation/design-v3/browser-performance-release-local.json)。
+- 首次发布代码be05e95的[GitHub Actions](https://github.com/Mingqing-H/gradtrip/actions/runs/44442977349)验证及部署成功。公开站点匿名四页×三尺寸、Hash刷新、图片、无错误无溢出共12组合通过；线上三个完整流程通过：共识/日程/分摊结算、隔离邀请反馈与备份恢复、只读快照。入口index-BJ9idEKU.js与本地构建一致。[原始记录](./validation/design-v3/online-smoke-first.json)。内置浏览器创建标签超时，按项目允许的Chrome自动回归完成线上验收。
+- 首次线上弱网性能LCP2984/3536/2508ms，中位数2984ms，未满足2500ms；CLS0.0531095、传输194650bytes通过。[失败原始记录](./validation/design-v3/browser-performance-online-first.json)。进一步诊断看到文档首字节约538ms、主脚本首字节约952ms，以及启动时校验和布局开销；该诊断不作为通过证据。
+- 后续启用Zod已有的jitless模式，避免初次读取本地数据时编译每个schema，不改变任何字段与跨字段规则。该修改本地三次冷加载LCP2480/2276/2288ms，中位数2288ms，CLS最大0.0352669，首屏194119bytes。[原始记录](./validation/design-v3/browser-performance-jitless-local.json)。公开部署后再记录实际结果，不以本地结果代替线上验收。
 
 ## Design v3：按 3 / 6 / 9 / 12 选稿实施（2026-11-19）
 

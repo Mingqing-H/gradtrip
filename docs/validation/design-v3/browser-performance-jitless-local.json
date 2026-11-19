@@ -1,0 +1,35 @@
+{
+  "url": "http://127.0.0.1:4175/gradtrip/",
+  "browser": "157.0.8103.79",
+  "cpuSlowdown": 4,
+  "downloadMbps": 1.6,
+  "uploadKbps": 750,
+  "latencyMs": 150,
+  "environment": "Cold independent contexts; local production preview unless PERFORMANCE_URL points to deployed site",
+  "runs": [
+    {
+      "lcp": 2480,
+      "cls": 0.035266859181246814,
+      "transferBytes": 194119,
+      "viewport": 375,
+      "scrollWidth": 375
+    },
+    {
+      "lcp": 2276,
+      "cls": 0.019704433497536946,
+      "transferBytes": 194119,
+      "viewport": 375,
+      "scrollWidth": 375
+    },
+    {
+      "lcp": 2288,
+      "cls": 0.019704433497536946,
+      "transferBytes": 194119,
+      "viewport": 375,
+      "scrollWidth": 375
+    }
+  ],
+  "medianLcp": 2288,
+  "maxCls": 0.035266859181246814,
+  "maxTransferBytes": 194119
+}
