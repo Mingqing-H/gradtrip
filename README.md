@@ -1,71 +1,69 @@
-# 同路 · 毕业旅行
+# 🎓 同路 · 毕业旅行
 
-帮助毕业旅行小队完成：成员意向收集 → 方案共识 → 日程安排 → 费用分摊与结算。
+**美团校招 Vibe Coding 项目作品** · 毕业旅行拼团规划工具
 
-**公开地址：[同路 · 毕业旅行](https://mingqing-h.github.io/gradtrip/)** · [源码](https://github.com/Mingqing-H/gradtrip) · [最终版本 final-20261119](https://github.com/Mingqing-H/gradtrip/tree/final-20261119)
+用 AI Coding 工具辅助设计与开发，让毕业旅行从“群里讨论”走向“共同出发”：收集成员意向、比较出行方案、安排每日行程，再把费用算清楚。
 
-四个工作区“小队、方案、日程、账本”，包含可操作示例、三维卡通头像、英文衬线标题和浅色毕业合照背景。纯静态运行，数据保存在当前浏览器；协作通过快照、邀请反馈与备份文件完成。无登录、实时同步、预订、支付或在线模型接口。
+🌐 **[在线体验](https://mingqing-h.github.io/gradtrip/)** · [项目源码](https://github.com/Mingqing-H/gradtrip) · [原始题目](docs/core_task.md)
 
-## 本地运行
+无需登录，打开即可体验可编辑的示例旅行。支持桌面、平板与手机。
 
-Node24.13.0（与.nvmrc和CI一致），使用npm及已提交的锁文件：
+## 🧭 作品功能
 
-```powershell
-npm.cmd ci
-npm.cmd run dev
-```
-
-开发地址 http://127.0.0.1:5173/gradtrip/ 。生产预览：
-
-```powershell
-npm.cmd run build
-npm.cmd run preview
-```
-
-默认生产预览地址 http://127.0.0.1:4173/gradtrip/ 。Windows使用npm.cmd可避免执行策略阻止npm.ps1；其他系统可直接使用npm。
-
-## 项目目录
-
-| 目录 | 内容 |
+| 工作区 | 可以做什么 |
 | --- | --- |
-| src/app、src/infrastructure | 应用编排、本地存储、恢复与版本冲突处理 |
-| src/domain | 与DOM及存储解耦的业务规则 |
-| src/features | 四个工作区及分享反馈界面 |
-| src/components、src/styles | 共用控件与视觉令牌 |
-| src/assets、src/data | 发布用图片、模板与静态数据 |
-| tests、scripts | 回归、性能检查与可复现的素材压缩 |
-| docs | [产品范围](docs/PRD.md)、[业务规则](docs/BUSINESS_RULES.md)、[设计规范](docs/design.md)、[验收记录](docs/ACCEPTANCE.md) |
-| docs/assets、docs/design-references | [素材来源](docs/assets/SOURCES.md)、原始生成素材与提示词、[四张已选设计稿](docs/design-references/README.md) |
-| docs/validation | 历史实测与最终本地验收数据 |
+| 👥 小队 | 管理成员，收集出发地、预算、可用日期与旅行偏好 |
+| 🗺️ 方案 | 比较目的地与费用估算，识别时间、预算冲突，收集意向并确认方案 |
+| 📅 日程 | 根据已确认方案生成行程，按天增删、调整活动，查看预算与时间冲突 |
+| 💰 账本 | 记录垫付与实际支出，支持均摊、自定义分摊、个人余额及转账建议 |
+| 🔗 协作 | 分享只读计划快照，收集单成员邀请反馈，导出与恢复完整备份 |
 
-node_modules是本地依赖，dist是最新构建，均不提交；.cache、.npm-cache和test-results等临时目录已忽略，可重新生成。旧设计备选、完整图库和历史文件可从Git历史找回。
+## 🛠️ 本地运行
 
-## 验证
+技术栈：**React · TypeScript · Vite · IndexedDB**。使用 Node.js **24.13.0** 与 npm。
 
-```powershell
-npm.cmd run typecheck
-npm.cmd run lint
-npm.cmd run test:run
-npm.cmd run check:integration
-npm.cmd run build
-npm.cmd run check:bundle-size
-npm.cmd run test:e2e
+```bash
+npm ci
+npm run dev
 ```
 
-E2E使用已安装的Chrome，覆盖375/768/1440px与实际/gradtrip/子路径；新环境可运行`npx playwright install --with-deps chrome`。专用集成用例在普通test:run中明确跳过，由check:integration独立执行。
+打开 [本地开发页面](http://127.0.0.1:5173/gradtrip/)。生产构建与预览使用 `npm run build`、`npm run preview`；Windows PowerShell 可用 `npm.cmd` 替代 `npm`。
 
-体积门槛为首屏JS/CSS gzip 200/40KiB、单图150KiB。性能脚本为benchmark:browser与benchmark:domain；浏览器测量默认访问生产preview，PERFORMANCE_URL可指定公开地址。原始输出在.cache，实际环境、结果与未达标项见[验收记录](docs/ACCEPTANCE.md)。
+## 📂 项目结构与文件规范
 
-## 数据与素材
+```text
+src/
+├── app/             应用入口、路由与状态编排
+├── features/        小队、方案、日程、账本及分享界面
+├── domain/          独立于界面的业务规则与计算
+├── infrastructure/  本地存储、事务与恢复
+├── contracts/       模块间共享契约
+├── components/      共用界面组件
+├── styles/          视觉令牌与全局样式
+├── assets/          发布用图片素材
+└── data/            模板与静态数据
+tests/               自动化测试
+scripts/             检查、性能测量与素材压缩
+docs/                需求、设计、素材来源及验收记录
+public/              站点图标与第三方许可声明
+.github/workflows/   GitHub Pages 自动检查与发布
+```
 
-IndexedDB使用固定应用ID和base作为数据库名称，普通更新不换库。写入在事务内校验命令ID、revision与业务不变量，事务完成后才显示已保存；旧标签页冲突、配额失败和损坏数据均提供明确恢复入口。备份覆盖保留恢复副本，快照只读，邀请反馈先预览后应用。详见[架构](docs/architecture.md)与[交接注意事项](HANDOFF.MD)。
+- **代码分层**：界面负责交互，领域层负责计算；业务写入统一经过校验与存储事务。
+- **文件管理**：提交源码与依赖锁文件；`node_modules/`、`dist/`、缓存及测试临时产物不入库。
+- **素材规范**：图片随站发布，保留来源、许可或生成提示词，压缩后使用；生成景观不冒充实拍。
+- **文档职责**：[PRD](docs/PRD.md) 说明范围，[业务规则](docs/BUSINESS_RULES.md) 说明计算与约束，[验收记录](docs/ACCEPTANCE.md) 记录实际结果，[HANDOFF.MD](HANDOFF.MD) 仅记录踩坑与解决方式。
 
-图片随站发布，无远程图库或字体请求。可复现的压缩脚本为optimize-images.mjs、optimize-avatars.mjs和optimize-backgrounds.mjs，原图与准确提示词保存在docs/assets。生成景观明确标识示意图，毕业合照只作虚构主题装饰。
+## 🛡️ 风险控制与边界
 
-运行时开源许可见public/THIRD_PARTY_NOTICES.txt。依赖更新后可运行`node scripts/generate-notices.mjs`重新生成。仓库不保存私人备份、真实成员资料或凭据。
+- **数据与隐私**：数据保存在当前浏览器，清理浏览器数据可能造成丢失，可导出备份；仓库不保存真实成员资料、私人备份或密钥。
+- **分享与导入**：快照、邀请和备份区分分享范围；导入先校验类型、大小、版本与关联关系，预览后应用。分享链接不会自动更新，也无法远程撤回。
+- **计算与一致性**：金额按整数分计算，校验分摊合计与余额；时间、预算是硬约束。事务完成后才提示保存成功，版本冲突不会静默覆盖。
+- **功能真实性**：费用为模板估算，结算为线下转账记录；当前版本不提供实时同步、实时机酒报价、预订或支付，也不依赖在线大模型接口。
+- **交付质量**：自动发布前执行类型、lint、测试、构建与资源体积检查；性能测量如实记录未达标项。固定公开地址，并保留可回退版本。
 
-## 发布与回退
+## 🌿 写在最后
 
-固定仓库为Mingqing-H/gradtrip，推送main后由[GitHub Actions](https://github.com/Mingqing-H/gradtrip/actions/workflows/deploy.yml)验证并部署GitHub Pages，地址不变。工作流固定Ubuntu24.04、Node24.13.0，按仓库名设置VITE_BASE_PATH；默认base为/gradtrip/，全部路由使用HashRouter。
+愿每一段同行都有回响，愿每一次出发皆向远方。
 
-最终交付标签为final-20261119；本次更新前版本保留为pre-final-20261119，早期基线为v0.1.0。回退应还原相应版本并通过同一工作流发布，先核对数据与备份兼容，不能清空用户数据。历史并行开发任务和报告保存在docs/tasks，不作为当前完成状态的依据。
+> 长风破浪会有时，直挂云帆济沧海。—— 李白《行路难》
