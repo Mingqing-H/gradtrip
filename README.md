@@ -8,6 +8,8 @@
 
 ## 本地开发
 
+界面按用户选定的设计稿 3、6、9、12 设计为浅紫色工作台，包含三维插画和写实生成景观；说明见 [Design v3](docs/design.md)，上线版本与实测结果见 [验收记录](docs/ACCEPTANCE.md)。
+
 使用 Node 24.13.0（与 .nvmrc 和 CI 一致）及 npm。依赖已锁定，不使用运行时远程图库、字体或业务 API。
 
 ```powershell

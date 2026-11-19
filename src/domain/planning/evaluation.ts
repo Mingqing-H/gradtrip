@@ -24,6 +24,19 @@ export function evaluateMemberAgainstPlan(
   return evaluatePreparedMember(member, plan, deps, getMemberProfileStatus(member), getTimeState(member, plan.startDate, plan.days));
 }
 
+/** 同一方案的出行区间只计算一次；成员资料与日期仍逐一校验。 */
+export function evaluateMembersAgainstPlan(
+  members: readonly Member[], plan: Plan, deps: PlanningDeps,
+): MemberPlanStatus[] {
+  const endDate = addDays(plan.startDate, plan.days - 1);
+  return members.map(member => {
+    const ranges = getMergedAvailability(member);
+    const time = ranges.length === 0 ? 'unknown'
+      : ranges.some(range => range.start <= plan.startDate && range.end >= endDate) ? 'pass' : 'conflict';
+    return evaluatePreparedMember(member, plan, deps, getMemberProfileStatus(member), time);
+  });
+}
+
 function evaluatePreparedMember(
   member: Member, plan: Plan, deps: PlanningDeps,
   profile: MemberPlanStatus['profile'], time: MemberPlanStatus['time'],
@@ -304,10 +317,23 @@ export function evaluateInviteePlans(
 
 /** Query-scoped index: no retained mutable cache, and no repeated history scans per member/plan. */
 export function createIntentLookup(intents: readonly Intent[], current?: { planId: Id; planVersion: number; constraintRevision: number }) {
+  // A single-plan query only needs member IDs after checking the shared binding once.
+  if (current) {
+    const members = new Map<Id, Intent>();
+    for (const intent of intents) {
+      if (intent.planId !== current.planId || !isCurrentIntent(intent, current.planVersion, current.constraintRevision)) continue;
+      const prior = members.get(intent.memberId);
+      if (!prior || intent.recordedAt >= prior.recordedAt) members.set(intent.memberId, intent);
+    }
+    return (memberId: Id, planId: Id, planVersion: number, revision: number): CurrentIntentView | undefined => {
+      if (planId !== current.planId || planVersion !== current.planVersion || revision !== current.constraintRevision) return undefined;
+      const intent = members.get(memberId);
+      return intent ? { value: intent.value, source: intent.source, recordedAt: intent.recordedAt } : undefined;
+    };
+  }
   const index = new Map<string, Intent>();
-  const key = (memberId: Id, planId: Id, planVersion: number, revision: number) => [memberId, planId, planVersion, revision].join('|');
+  const key = (memberId: Id, planId: Id, planVersion: number, revision: number) => `${memberId}|${planId}|${planVersion}|${revision}`;
   for (const intent of intents) {
-    if (current && (intent.planId !== current.planId || !isCurrentIntent(intent, current.planVersion, current.constraintRevision))) continue;
     const binding = key(intent.memberId, intent.planId, intent.planVersion, intent.constraintRevision);
     const prior = index.get(binding);
     if (!prior || intent.recordedAt >= prior.recordedAt) index.set(binding, intent);

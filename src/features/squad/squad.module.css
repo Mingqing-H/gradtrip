@@ -1,89 +1,42 @@
-.progress { display: block; width: min(240px, 100%); height: 4px; margin-top: 12px; border: 0; border-radius: 0; background: var(--line); }
-.progress::-webkit-progress-bar { background: var(--line); }
-.progress::-webkit-progress-value { background: var(--color-primary); }
-.progress::-moz-progress-bar { background: var(--color-primary); }
-
-.memberTable { width: 100%; border-collapse: collapse; }
-.memberTable th, .memberTable td { text-align: left; padding: 12px; border-bottom: 1px solid var(--color-border); vertical-align: middle; }
-.memberTable th { padding-block: 12px; font-size: 12px; line-height: 20px; color: var(--color-muted); font-weight: 500; background: var(--color-primary-soft); white-space: nowrap; }
-.memberTable td { font-size: 14px; line-height: 24px; font-variant-numeric: tabular-nums; }
-.memberTable td:nth-child(3) { font-weight: 600; white-space: nowrap; }
-.memberTable td:nth-child(4) { font-size: 12px; white-space: nowrap; }
-.memberTable tbody tr { transition: background-color 160ms var(--motion-curve); }
-.memberTable tbody tr:hover { background: var(--pine-50); }
-.memberIdentity { display: inline-flex; align-items: center; gap: 12px; min-width: 0; }
-.memberIdentity strong { overflow-wrap: anywhere; }
-.memberName { font-weight: 600; overflow-wrap: anywhere; min-width: 3em; }
-.badge { display: inline-flex; align-items: center; gap: 4px; padding: 2px 0; font-size: 12px; line-height: 20px; white-space: nowrap; }
-.badgeComplete { color: var(--color-success); }
-.badgeIncomplete { color: var(--color-warning); }
-.rowActions { display: flex; gap: 4px; align-items: center; }
-.linkButton { display: inline-flex; gap: 6px; align-items: center; justify-content: center; border: 1px solid transparent; border-radius: 4px; background: transparent; color: var(--color-primary); font-size: 12px; line-height: 20px; font-weight: 600; padding: 8px; min-height: 44px; white-space: nowrap; }
-.linkButton:hover { background: var(--color-primary-soft); border-color: var(--line-strong); }
-.linkButton.danger { color: var(--color-muted); }
-.linkButton.danger:hover { color: var(--color-danger); background: var(--brick-50); border-color: var(--brick-100); }
-.cardList { display: none; gap: 0; }
-.memberCard { border-bottom: 1px solid var(--color-border); padding: 20px 0; display: grid; gap: 12px; }
-.memberCard:first-child { border-top: 1px solid var(--color-border); }
-.memberCardHead { display: flex; justify-content: space-between; align-items: center; gap: 12px; }
-.memberCardFields { display: grid; grid-template-columns: 1fr 1fr; gap: 4px 12px; color: var(--color-muted); font-size: 14px; }
-.memberPreferences { grid-column: 1 / -1; font-size: 12px; line-height: 20px; }
-.memberCardActions { display: flex; gap: 8px; flex-wrap: wrap; }
-.memberCardActions .button { font-size: 12px; min-height: 44px; padding: 8px 12px; }
-.preferenceTags { display: flex; gap: 8px; flex-wrap: wrap; }
-.tagChip { border: 1px solid var(--color-border); background: var(--surface); border-radius: 4px; padding: 8px 12px; min-height: 44px; font-size: 14px; }
-.tagChip:hover { border-color: var(--color-primary); background: var(--color-primary-soft); }
-.tagChip.selected { border-color: var(--color-primary); background: var(--color-primary-soft); color: var(--color-primary); font-weight: 600; }
-.rangeRow { display: grid; grid-template-columns: 1fr 1fr auto; gap: 8px; align-items: end; margin-bottom: 8px; }
-.formHint { color: var(--color-muted); font-size: 12px; line-height: 20px; }
-.blockedList { background: var(--brick-50); border: 1px solid var(--brick-100); border-radius: 4px; padding: 12px 16px; color: var(--color-danger); }
-.form { display: grid; gap: 4px; }
-.fieldset { border: 0; border-top: 1px solid var(--color-border); border-radius: 0; padding: 20px 0 0; margin: 8px 0 16px; min-width: 0; }
-.fieldset legend { font-weight: 600; padding: 0 12px 0 0; }
-.memberSubRow { color: var(--color-muted); font-size: 12px; line-height: 20px; }
-
-.squadPage { display: grid; gap: var(--space-8); position: relative; }
-.rosterLayout { display: grid; grid-template-columns: minmax(0, 1fr) 264px; gap: var(--space-6); align-items: start; }
-.roster { min-width: 0; background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius-card); box-shadow: var(--shadow-1); }
-.memberTable th, .memberTable td { padding: var(--space-3) var(--space-2); }
-.memberTable th:first-child, .memberTable td:first-child { padding-left: var(--space-4); }
-.memberTable th { background: var(--canvas-sunken); }
-.memberTable td:nth-child(2) { text-align: right; font-weight: 600; white-space: nowrap; }
-.memberTable td:nth-child(3) { font: var(--text-caption); white-space: normal; }
-.memberTable td:nth-child(4) { white-space: normal; }
-.memberTable tbody tr:last-child td { border-bottom: 0; }
-.memberSubRow { display: block; margin-top: var(--space-1); }
-.tags { display: flex; gap: var(--space-1); flex-wrap: wrap; }
-.aside { position: sticky; top: calc(var(--topbar-h) + 24px); display: grid; gap: var(--space-6); }
-.landscape { position: relative; margin: 0; overflow: hidden; border-radius: var(--radius-hero); aspect-ratio: 1.6; }
-.landscape picture, .landscape img { display: block; width: 100%; height: 100%; object-fit: cover; }
-.landscape figcaption { position: absolute; right: var(--space-3); bottom: var(--space-3); font: var(--text-caption); border: 1px solid var(--seal); background: var(--surface); color: var(--brick-800); border-radius: var(--radius-chip); padding: 0 var(--space-2); }
-.pending { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius-card); padding: var(--space-5); display: grid; gap: var(--space-4); }
-.pendingRow { display: flex; align-items: center; gap: var(--space-2); }
-.pendingRow > div { flex: 1; }
-.pendingRow strong { font: var(--text-data); font-weight: 600; }
-.pendingRow span:not(:global(.avatar)) { display: block; font: var(--text-caption); color: var(--ink-500); }
-.progress { width: 100%; margin: 0; }
-.linkButton { min-width: 44px; }
-@media (max-width: 1399px) { .rosterLayout { grid-template-columns: 1fr; } .aside { position: static; grid-template-columns: 220px 1fr; } }
-@media (max-width: 1199px) {
- .squadPage :global(.page-header) { padding-right: 108px; }
- .squadPage :global(.page-actions) { margin-top: var(--space-2); }
- .squadPage :global(.page-header) { flex-wrap: wrap; }
- .aside { display: block; }
- .landscape { position: absolute; top: 0; right: 0; width: 96px; height: 72px; }
- .landscape figcaption { right: 4px; bottom: 4px; padding: 0 4px; }
- .memberTable { display: none; } .cardList { display: grid; }
- .memberCard { padding: var(--space-4); gap: var(--space-2); }
- .memberCard:first-child { border-top: 0; } .memberCard:last-child { border-bottom: 0; }
- .memberCardFields { display: block; font: var(--text-caption); }
- .memberCardActions { display: grid; grid-template-columns: repeat(3,1fr); gap: 0; }
- .memberCardActions :global(.button) { padding: var(--space-2); border-radius: 0; font-size: 12px; }
- .memberCardActions :global(.button) + :global(.button) { border-left: 1px solid var(--line); }
-}
-@media (max-width: 767px) {
- .squadPage { gap: var(--space-6); }
- .landscape { width: 88px; height: 88px; }
- .rangeRow { grid-template-columns: 1fr; }
- .rangeRow :global(.field) { margin-bottom: 0; }
-}
+.squadPage { display: grid; gap: 36px; }
+.rosterLayout { display: grid; grid-template-columns: minmax(0,1fr) 280px; gap: 18px; align-items: stretch; }
+.cardList { display: grid; grid-template-columns: repeat(3,minmax(0,1fr)); gap: 16px; align-content: start; }
+.memberCard { min-width: 0; position: relative; display: flex; flex-direction: column; padding: 20px; min-height: 336px; border: 1px solid var(--line); border-radius: var(--radius-card); background: var(--surface); transition: border-color var(--dur-base), box-shadow var(--dur-base); }
+.memberCard:hover { border-color: var(--violet-200); box-shadow: var(--shadow-1); }
+.memberCardHead { display: flex; align-items: center; justify-content: space-between; gap: 4px; margin-bottom: 20px; }
+.memberIdentity { border: 0; padding: 0; background: transparent; display: flex; align-items: center; gap: 10px; text-align: left; color: var(--ink-900); min-width: 0; min-height: 44px; }
+.memberIdentity strong { font-size: 20px; font-weight: 650; overflow-wrap: anywhere; }
+.memberIdentity :global(.avatar) { width: 52px; height: 52px; flex-basis: 52px; font-size: 26px; }
+.memberCardHead :global(.icon-button) { width: 44px; min-width: 44px; color: var(--ink-500); padding: 4px; }
+.budget { display: grid; gap: 2px; margin-bottom: 20px; }
+.budget strong { font: 700 40px/1.25 var(--font-sans); letter-spacing: -.6px; font-variant-numeric: tabular-nums; }
+.budget > span { font: var(--text-data); color: var(--ink-500); }
+.memberCardFields { display: grid; gap: 10px; font: 500 16px/26px var(--font-sans); }
+.memberCardFields > span { display: flex; gap: 10px; align-items: center; }
+.memberCardFields svg { color: var(--ink-500); flex-shrink: 0; }
+.tags { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 20px; }
+.tags > span { display: inline-flex; align-items: center; gap: 6px; padding: 3px 12px; border-radius: var(--radius-pill); background: var(--violet-100); color: var(--violet-900); font: var(--text-data); }
+.tags [data-preference='海边'] { background: var(--amber-50); color: var(--amber-800); }
+.tags [data-preference='城市'] { background: var(--sea-100); color: var(--sea-700); }
+.tags [data-preference='自然'] { background: var(--success-bg); color: var(--success-fg); }
+.missing { min-height: 44px; border: 0; padding: 8px 0 0; background: transparent; text-align: left; }
+.aside { display: flex; flex-direction: column; align-items: center; min-width: 0; background: var(--violet-50); border-radius: var(--radius-hero); padding: 28px 16px; }
+.travelArt { display: block; width: 100%; margin-top: 10px; }
+.travelArt img { display: block; width: 100%; height: auto; object-fit: contain; aspect-ratio: 6/7; }
+.dateSummary { display: grid; gap: 16px; width: 100%; margin-top: 26px; padding-inline: 8px; }
+.dateSummary h2 { font: var(--text-subtitle); }
+.dateSummary > strong { width: fit-content; font: var(--text-figure-lg); font-size: 28px; white-space: nowrap; border-bottom: 7px solid var(--amber-100); border-radius: 5px; line-height: 1.1; }
+.dateSummary :global(.next-step) { margin-top: 12px; }
+.formHint { color: var(--ink-500); font: var(--text-caption); }
+.form { display: grid; gap: 16px; }
+.fieldset { border: 0; border-top: 1px solid var(--line); padding: 16px 0; }
+.fieldset legend { font-weight: 600; }
+.rangeRow { display: grid; grid-template-columns: minmax(0,1fr) minmax(0,1fr) auto; gap: 12px; align-items: start; }
+.preferenceTags { display: flex; flex-wrap: wrap; gap: 8px; }
+.tagChip { display: inline-flex; align-items: center; gap: 6px; min-height: 44px; padding: 8px 16px; border: 1px solid var(--line-strong); border-radius: var(--radius-pill); background: var(--surface); color: var(--ink-700); }
+.tagChip.selected { color: var(--violet-700); background: var(--violet-100); border-color: var(--violet-200); }
+.blockedList { color: var(--danger-fg); }
+@media (min-width: 1200px) and (max-width: 1399px) { .rosterLayout { grid-template-columns: minmax(0,1fr) 220px; } .memberCard { padding: 16px; } .budget strong { font-size: 30px; } .memberIdentity :global(.avatar) { width: 40px; height: 40px; flex-basis: 40px; font-size: 22px; } }
+@media (max-width: 1199px) { .rosterLayout { grid-template-columns: minmax(0,1fr) 196px; gap: 16px; } .cardList { grid-template-columns: repeat(2,minmax(0,1fr)); } .memberCard { padding: 16px; } .budget strong { font-size: 30px; } .dateSummary > strong { font-size: 23px; } .aside { padding: 20px 12px; } }
+@media (max-width: 999px) { .rosterLayout { grid-template-columns: 1fr; } .aside { flex-direction: row; padding: 16px 24px; gap: 24px; } .travelArt { width: 130px; flex-shrink: 0; margin: 0; } .dateSummary { margin: 0; gap: 12px; } .dateSummary :global(.next-step) { margin: 0; } }
+@media (max-width: 767px) { .squadPage { gap: 24px; } .cardList { gap: 12px; } .memberCard { padding: 14px; min-height: 270px; } .memberCardHead { margin-bottom: 12px; } .memberIdentity { gap: 7px; } .memberIdentity :global(.avatar) { width: 34px; height: 34px; flex-basis: 34px; font-size: 18px; } .memberIdentity strong { font-size: 15px; } .budget strong { font-size: 26px; } .memberCardHead :global(.icon-button) { min-width: 44px; width: 44px; } .memberCardFields { font-size: 12px; gap: 8px; } .memberCardFields > span { gap: 6px; } .memberCardFields svg { width: 15px; height: 15px; } .tags { gap: 4px; margin-top: 16px; } .tags > span { font-size: 12px; padding: 2px 8px; } .tags svg { width: 14px; } .budget { margin-bottom: 16px; } .budget > span { font-size: 12px; } .aside { padding: 16px; gap: 12px; } .travelArt { width: 104px; } .dateSummary > strong { font-size: 24px; } .rangeRow { grid-template-columns: 1fr; } }

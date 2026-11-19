@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { getPlanEvaluations, getCurrentIntent, computePreferenceScore } from '../../../src/domain/planning/evaluation';
+import { getPlanEvaluations, getCurrentIntent, computePreferenceScore, evaluateMemberAgainstPlan, evaluateMembersAgainstPlan, createIntentLookup } from '../../../src/domain/planning/evaluation';
 import { toPlanningContext } from '../../../src/domain/planning/commands';
 import { fixtureDeps, makeMember, makePlan, makeTrip } from './fixtures';
 
@@ -18,6 +18,39 @@ function contextOf(members: ReturnType<typeof makeMember>[], plans: ReturnType<t
 }
 
 describe('逐成员适配状态（BR-05）', () => {
+  it('单方案索引隔离方案和版本，并按最新时间及稳定尾序选择意向', () => {
+    const base = { memberId: 'm1', planId: 'p1', planVersion: 2, constraintRevision: 3, value: 'approve' as const, source: 'demo' as const, recordedAt: '2026-07-01T00:00:00Z' };
+    const intents = [base,
+      { ...base, planId: 'other', recordedAt: '2026-07-03T00:00:00Z' },
+      { ...base, planVersion: 1, recordedAt: '2026-07-03T00:00:00Z' },
+      { ...base, constraintRevision: 2, recordedAt: '2026-07-03T00:00:00Z' },
+      { ...base, value: 'decline' as const, recordedAt: '2026-07-02T00:00:00Z' },
+      { ...base, value: 'acceptable' as const, recordedAt: '2026-07-02T00:00:00Z' }];
+    const lookup = createIntentLookup(intents, { planId: 'p1', planVersion: 2, constraintRevision: 3 });
+    expect(lookup('m1', 'p1', 2, 3)).toEqual(getCurrentIntent(intents, 'm1', 'p1', 2, 3));
+    expect(lookup('m1', 'p1', 2, 3)?.value).toBe('acceptable');
+    expect(lookup('m1', 'other', 2, 3)).toBeUndefined();
+    expect(lookup('m1', 'p1', 1, 3)).toBeUndefined();
+    expect(lookup('m1', 'p1', 2, 2)).toBeUndefined();
+    expect(lookup('missing', 'p1', 2, 3)).toBeUndefined();
+  });
+
+  it('批量确认保留日期合并、缺失资料、未知交通和预算边界的逐人结果', () => {
+    const members = [
+      makeMember({ id: 'equal', budgetCap: 144000 }),
+      makeMember({ id: 'over', budgetCap: 143999 }),
+      makeMember({ id: 'unknown', originCity: '拉萨', budgetCap: null }),
+      makeMember({ id: 'missing', availability: [] }),
+      makeMember({ id: 'invalid', availability: [{ start: '2026-02-30', end: '2026-07-31' }] }),
+      makeMember({ id: 'adjacent', availability: [{ start: '2026-07-15', end: '2026-07-15' }, { start: '2026-07-16', end: '2026-07-17' }] }),
+      makeMember({ id: 'gap', availability: [{ start: '2026-07-15', end: '2026-07-15' }, { start: '2026-07-17', end: '2026-07-17' }] }),
+    ];
+    const plan = makePlan();
+    expect(evaluateMembersAgainstPlan(members, plan, fixtureDeps))
+      .toEqual(members.map(member => evaluateMemberAgainstPlan(member, plan, fixtureDeps)));
+    expect(evaluateMembersAgainstPlan([], plan, fixtureDeps)).toEqual([]);
+  });
+
   it('资料缺失为待补充，不算匹配也不抬高适配（R01）', () => {
     const members = [makeMember({ id: 'm1' }), makeMember({ id: 'm2', budgetCap: null })];
     const result = getPlanEvaluations(contextOf(members, [makePlan()]), fixtureDeps);

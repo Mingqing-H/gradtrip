@@ -1,109 +1,58 @@
 :root {
   color-scheme: light;
   font-family: var(--font-sans); color: var(--ink-900); background: var(--canvas); font-synthesis: none;
-  --sidebar-text: #E3EFE8; --sidebar-muted: #A9C6B8; --sidebar-hover: #204A3E;
-  --backdrop: rgb(16 58 49 / .45);
-
-  /* ── 字体：不加载任何远程字体 ── */
-  --font-sans: Manrope, 'PingFang SC', 'HarmonyOS Sans SC', 'Microsoft YaHei UI', 'Microsoft YaHei', system-ui, sans-serif;
-  /* 衬线只作增强：有 Songti SC / Noto Serif SC / Source Han Serif SC 才用，否则回退无衬线。回退链里不得出现 SimSun、STSong */
-  --font-display: 'Songti SC', 'Noto Serif SC', 'Source Han Serif SC', var(--font-sans);
-
-  /* ── 中性色：暖纸色 + 深墨绿文字 ── */
-  --canvas: #F4F1E8;          /* L0 页面底 */
-  --canvas-sunken: #ECE8DB;   /* L2 凹槽：表头、摘要井 */
-  --surface: #FFFFFF;         /* L1 面 */
-  --line: #E3DDCC;            /* 装饰性细线（分隔、面的描边） */
-  --line-strong: #CFC7B3;     /* 悬停描边、虚线 */
-  --control-border: #8A9786;  /* 表单控件边界，对白底 ≥ 3:1 */
-  --ink-900: #15231E;         /* 主文字 */
-  --ink-700: #3E4F49;         /* 次要正文 */
-  --ink-500: #5B6B64;         /* 辅助文字（可用于正文，≥ 4.5:1） */
-  --ink-300: #9AA69F;         /* 仅用于禁用态与装饰，不得承载文字 */
-
-  /* ── 品牌：松绿 ── */
-  --pine-900: #103A31;        /* 侧栏底、深色面 */
-  --pine-800: #0F4538;        /* 主按钮悬停 */
-  --pine-700: #17594A;        /* 主色：主按钮、链接、选中 */
-  --pine-600: #23735C;        /* 焦点环、进度条亮部 */
-  --pine-500: #2E8068;
-  --pine-200: #BFD6C8;
-  --pine-100: #DDEAE2;        /* 选中底、成功底 */
-  --pine-50:  #EDF4EF;        /* 行悬停、浅强调底 */
-
-  /* ── 语义色（每色都配图标与文字，不单独承担含义） ── */
-  --sea-700: #1D6483;  --sea-600: #2A7595;  --sea-100: #DFEEF5;  --sea-50: #EEF6FA;     /* 信息 / 可接受 / 交通 */
-  --amber-800: #7A4E0C; --amber-600: #B7791F; --amber-100: #FBEBC6; --amber-50: #FDF5E1; /* 警告 / 待处理 / 待估算 */
-  --brick-800: #8A2621; --brick-700: #A3302A; --brick-100: #FAE4E0; --brick-50: #FDF2F0; /* 错误 / 冲突 / 危险 */
-  --seal: #B23A22;            /* 朱砂：仅品牌印章与“示意图”戳记，不用于文字与语义 */
-
-  /* 语义别名 */
-  --success-fg: var(--pine-700);  --success-bg: var(--pine-100);
-  --info-fg:    var(--sea-700);   --info-bg:    var(--sea-100);
+  --font-sans: 'Noto Sans SC', 'PingFang SC', 'HarmonyOS Sans SC', 'Microsoft YaHei UI', 'Microsoft YaHei', system-ui, sans-serif;
+  --font-display: var(--font-sans); --font-heading: var(--font-sans);
+  --canvas: #F8F7FD; --canvas-sunken: #F0ECFB; --surface: #FFFFFF;
+  --line: #E5E0F2; --line-strong: #D2C9EB; --control-border: #8F83AC;
+  --ink-900: #22243D; --ink-700: #484B67; --ink-500: #6B6D86; --ink-300: #A4A2B5;
+  --violet-900: #302459; --violet-800: #4F32C0; --violet-700: #6545DB; --violet-600: #7857E7;
+  --violet-500: #8B6CEC; --violet-200: #D6CAFA; --violet-100: #E9E1FC; --violet-50: #F3EFFD;
+  /* Compatibility aliases for existing forms and external flows. */
+  --pine-900: var(--violet-900); --pine-800: var(--violet-800); --pine-700: var(--violet-700);
+  --pine-600: var(--violet-600); --pine-500: var(--violet-500); --pine-200: var(--violet-200);
+  --pine-100: var(--violet-100); --pine-50: var(--violet-50);
+  --sea-700: #2C66A3; --sea-600: #397ABB; --sea-100: #DDEEFF; --sea-50: #F1F7FF;
+  --amber-800: #855A18; --amber-600: #B98222; --amber-100: #FFF0BE; --amber-50: #FFFAE8;
+  --brick-800: #87304E; --brick-700: #A83B5A; --brick-100: #FBE3EC; --brick-50: #FFF2F6;
+  --success-fg: #357145; --success-bg: #E9F5E5;
+  --info-fg: var(--sea-700); --info-bg: var(--sea-100);
   --warning-fg: var(--amber-800); --warning-bg: var(--amber-100);
-  --danger-fg:  var(--brick-700); --danger-bg:  var(--brick-100);
-
-  /* 头像色（背景 / 文字），首字或顺序取模分配 */
-  --avatar-1-bg: var(--pine-100);  --avatar-1-fg: var(--pine-700);
-  --avatar-2-bg: #EFE6CF;          --avatar-2-fg: #6A4F12;
-  --avatar-3-bg: var(--sea-100);   --avatar-3-fg: var(--sea-700);
-  --avatar-4-bg: #F6E2DA;          --avatar-4-fg: #8B3A22;
-  --avatar-5-bg: #E8E5F1;          --avatar-5-fg: #4B4380;
-  --avatar-6-bg: #E3EAD8;          --avatar-6-fg: #44582A;
-
-  /* ── 字号（font 简写：粗细 字号/行高 字体） ── */
-  --text-display:  700 40px/48px var(--font-display);   /* 页面 H1，手机 30/38 */
-  --text-title-lg: 700 28px/36px var(--font-display);   /* 目的地名、关键标题 */
-  --text-title:    600 20px/28px var(--font-sans);      /* 区块标题 H2 */
-  --text-subtitle: 600 16px/24px var(--font-sans);      /* 行标题、H3 */
-  --text-body:     400 15px/24px var(--font-sans);
-  --text-data:     500 14px/20px var(--font-sans);      /* 表格与列表内数据 */
-  --text-caption:  400 12px/20px var(--font-sans);      /* 最小字号，不得更小 */
-  --text-eyebrow:  600 12px/20px var(--font-sans);      /* 页头上方小标题，配 letter-spacing: .06em */
-  --text-figure-xl: 600 44px/48px var(--font-sans);     /* 总金额 */
-  --text-figure-lg: 600 28px/32px var(--font-sans);     /* 统计数字 */
-  --text-figure-md: 600 20px/28px var(--font-sans);     /* 行内金额 */
-  /* 所有数字场景叠加：font-variant-numeric: tabular-nums lining-nums; */
-
-  /* ── 间距（4 px 基数） ── */
-  --space-1: 4px;  --space-2: 8px;  --space-3: 12px; --space-4: 16px; --space-5: 20px;
+  --danger-fg: var(--brick-700); --danger-bg: var(--brick-100);
+  --seal: var(--ink-500);
+  --sidebar-text: var(--ink-900); --sidebar-muted: var(--ink-500); --sidebar-hover: var(--violet-50);
+  --backdrop: rgb(34 36 61 / .32);
+  --avatar-1-bg: #E9DCFF; --avatar-1-fg: #4D328D;
+  --avatar-2-bg: #DDEBFF; --avatar-2-fg: #295D95;
+  --avatar-3-bg: #FFF0C6; --avatar-3-fg: #775725;
+  --avatar-4-bg: #FBE4F1; --avatar-4-fg: #914F70;
+  --avatar-5-bg: #E7DCFC; --avatar-5-fg: #5D4193;
+  --avatar-6-bg: #DBECFF; --avatar-6-fg: #2B6196;
+  --text-display: 700 52px/1.2 var(--font-sans);
+  --text-title-lg: 700 28px/1.3 var(--font-sans);
+  --text-title: 650 22px/1.4 var(--font-sans);
+  --text-subtitle: 600 18px/26px var(--font-sans);
+  --text-body: 400 16px/26px var(--font-sans);
+  --text-data: 500 16px/25px var(--font-sans);
+  --text-caption: 400 13px/21px var(--font-sans);
+  --text-eyebrow: 600 13px/21px var(--font-sans);
+  --text-figure-xl: 700 40px/1.2 var(--font-sans);
+  --text-figure-lg: 700 32px/1.25 var(--font-sans);
+  --text-figure-md: 650 22px/30px var(--font-sans);
+  --space-1: 4px; --space-2: 8px; --space-3: 12px; --space-4: 16px; --space-5: 20px;
   --space-6: 24px; --space-8: 32px; --space-10: 40px; --space-12: 48px; --space-16: 64px; --space-20: 80px;
-
-  /* ── 圆角 ── */
-  --radius-chip: 6px;     /* 标签 */
-  --radius-control: 8px;  /* 按钮、输入 */
-  --radius-card: 12px;    /* 面 Sheet、菜单 */
-  --radius-hero: 16px;    /* 图片、对话框、方案卡片 */
-  --radius-pill: 999px;   /* 状态 Chip、分段控件 */
-
-  /* ── 阴影（轻，仅 3 档） ── */
-  --shadow-1: 0 1px 2px rgb(21 35 30 / .06), 0 2px 8px rgb(21 35 30 / .04);                /* 面 */
-  --shadow-2: 0 4px 12px rgb(21 35 30 / .08), 0 12px 28px rgb(21 35 30 / .08);             /* 悬停抬升、浮动操作 */
-  --shadow-pop: 0 16px 48px rgb(16 58 49 / .24);                                           /* 弹层、菜单 */
-  --focus-ring: 0 0 0 2px var(--canvas), 0 0 0 4px var(--pine-600);                         /* 焦点环：内圈留白 + 外圈松绿 */
-  --field-ring: 0 0 0 3px rgb(23 89 74 / .2);                                               /* 输入聚焦光晕 */
-
-  /* ── 动效 ── */
-  --ease-out: cubic-bezier(.22, 1, .36, 1);
-  --motion-curve: var(--ease-out);   /* 旧名兼容 */
+  --radius-chip: 8px; --radius-control: 12px; --radius-card: 18px; --radius-hero: 24px; --radius-pill: 999px;
+  --shadow-1: 0 2px 5px rgb(67 44 126 / .025);
+  --shadow-2: 0 6px 20px rgb(67 44 126 / .08);
+  --shadow-pop: 0 16px 48px rgb(39 27 78 / .16);
+  --focus-ring: 0 0 0 2px var(--canvas), 0 0 0 4px var(--violet-600);
+  --field-ring: 0 0 0 3px rgb(101 69 219 / .14);
+  --ease-out: cubic-bezier(.22, 1, .36, 1); --motion-curve: var(--ease-out);
   --dur-fast: 120ms; --dur-base: 180ms; --dur-slow: 280ms;
-
-  /* ── 层级 ── */
   --z-nav: 4; --z-fab: 6; --z-menu: 20; --z-dialog: 40; --z-skip: 100;
-
-  /* ── 布局 ── */
-  --sidebar-w: 232px;          /* ≥1200；768–1199 用 184px */
-  --topbar-h: 64px;
-  --tabbar-h: 64px;            /* 手机底部导航，另加 env(safe-area-inset-bottom) */
-  --content-max: 1200px;       /* 内容区最大宽度（不含左右内边距） */
-  --page-pad: 48px;            /* ≥1440；1200–1439 用 32px；768–1199 用 24px；<768 用 16px */
-
-  /* ── 旧令牌别名：迁移期保留，全部页面迁完后删除 ── */
-  --color-bg: var(--canvas);           --color-surface: var(--surface);
-  --color-text: var(--ink-900);        --color-muted: var(--ink-500);
-  --color-primary: var(--pine-700);    --color-primary-hover: var(--pine-800);
-  --color-primary-soft: var(--pine-50); --color-border: var(--line);
-  --color-success: var(--success-fg);  --color-warning: var(--warning-fg);
-  --color-danger: var(--danger-fg);    --color-sidebar: var(--pine-900);
-  --color-sage: var(--pine-100);       --font-heading: var(--font-display);
+  --sidebar-w: 190px; --topbar-h: 80px; --tabbar-h: 64px; --content-max: 1440px; --page-pad: 40px;
+  --color-bg: var(--canvas); --color-surface: var(--surface); --color-text: var(--ink-900); --color-muted: var(--ink-500);
+  --color-primary: var(--violet-700); --color-primary-hover: var(--violet-800); --color-primary-soft: var(--violet-50);
+  --color-border: var(--line); --color-success: var(--success-fg); --color-warning: var(--warning-fg); --color-danger: var(--danger-fg);
+  --color-sidebar: var(--canvas); --color-sage: var(--violet-100);
 }

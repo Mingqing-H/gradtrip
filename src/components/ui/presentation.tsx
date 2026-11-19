@@ -1,5 +1,6 @@
 import { useEffect, useId, useRef, useState, type ReactNode } from 'react';
 import { CircleCheck, CircleAlert, CircleDashed, Clock, Info, Check, Ellipsis } from 'lucide-react';
+const brandMark = new URL('../../assets/illustrations/brand-mountains.webp', import.meta.url).href;
 
 export type Tone = 'neutral' | 'success' | 'info' | 'warning' | 'danger';
 const toneIcons = { neutral: CircleDashed, success: CircleCheck, info: Info, warning: Clock, danger: CircleAlert };
@@ -27,7 +28,7 @@ export function Notice({ tone = 'info', children }: { tone?: Tone; children: Rea
   const Icon = toneIcons[tone];
   return <div className={`notice tone-${tone}`} role={tone === 'danger' ? 'alert' : 'status'}><Icon size={20} aria-hidden="true"/><div>{children}</div></div>;
 }
-export function Brand() { return <><span className="brand-seal" aria-hidden="true">同</span><span className="brand-word">同路</span></>; }
+export function Brand() { return <><img className="brand-mark" src={brandMark} width={40} height={30} alt=""/><span className="brand-word">同路</span></>; }
 
 export function SegmentedControl({ label, value, options, onChange }: { label: string; value: string; options: { value: string; label: string }[]; onChange: (value: string) => void }) {
   return <div className="segment-field"><span>{label}</span><div className="segmented-control" role="radiogroup" aria-label={label} onKeyDown={event => {
@@ -41,7 +42,7 @@ export function SegmentedControl({ label, value, options, onChange }: { label: s
 }
 
 /** Row actions do not add another details/summary to the workspace. */
-export function ActionMenu({ children }: { children: ReactNode }) {
+export function ActionMenu({ children, label = '操作' }: { children: ReactNode; label?: string }) {
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
   const trigger = useRef<HTMLButtonElement>(null);
@@ -53,7 +54,7 @@ export function ActionMenu({ children }: { children: ReactNode }) {
     return () => document.removeEventListener('pointerdown', close);
   }, [open]);
   return <div className="action-menu" ref={ref} onKeyDown={event => { if (event.key === 'Escape') { setOpen(false); trigger.current?.focus(); } }}>
-    <button ref={trigger} className="button button-ghost icon-button" aria-label="操作" aria-expanded={open} aria-controls={id} onClick={() => setOpen(!open)}><Ellipsis size={20}/></button>
+    <button ref={trigger} className="button button-ghost icon-button" aria-label={label} aria-expanded={open} aria-controls={id} onClick={() => setOpen(!open)}><Ellipsis size={20}/></button>
     {open && <div id={id} className="menu-items" onClick={() => { setOpen(false); trigger.current?.focus(); }}>{children}</div>}
   </div>;
 }

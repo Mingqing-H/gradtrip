@@ -1,5 +1,7 @@
 # 规划域素材来源（T02）
 
+本文件为历史记录。2026-11-19 的 Design v3 已将运行时目的地图替换为写实生成景观，当前来源与准确提示词以 [SOURCES-v3](./SOURCES-v3.md) 为准。
+
 本文件记录 T02 目的地示意图的制作信息，由 T01 汇总到 `docs/assets/SOURCES.md` / `public/THIRD_PARTY_NOTICES.txt`。
 
 ## 生成图片

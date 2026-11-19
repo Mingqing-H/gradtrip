@@ -1,4 +1,3 @@
-import { useNavigationSignals } from './useNavigationSignals';
 import { Component, Suspense, useEffect, useRef, useState, type ReactNode } from 'react';
 import { HashRouter, Link, Navigate, Route, Routes, useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { CalendarDays, Map, Plus, Share2, Users, Wallet } from 'lucide-react';
@@ -34,7 +33,6 @@ function Workbench({ runtime }: { runtime: Runtime }) {
   const [submitting, setSubmitting] = useState(false); const [panel, setPanel] = useState<SharingPanel | null>(() => search.get('import') === '1' ? { type: 'import', data: search.get('data') ?? undefined } : null);
   const [leaveTarget, setLeaveTarget] = useState<string | null>(null);
   const trip = state.trip;
-  const signals = useNavigationSignals(trip, dependencies.planning, dateToday(new Date()));
   const currentRecord = state.records.find(record => record.id === params.tripId);
   const go = (target: string) => {
     if (state.saveStatus === 'unsaved' || state.saveStatus === 'conflict' || state.saveStatus === 'saving') setLeaveTarget(target);
@@ -91,17 +89,18 @@ function Workbench({ runtime }: { runtime: Runtime }) {
     if (result.ok) { setDialog(null); navigate('/'); } else setFormError(result.error.message);
   };
   return <><SkipLink/><div className="shell">
-    <aside className="sidebar"><Link className="brand" to="/"><Brand/></Link><nav aria-label="工作区">{navigation.map(({ path, label, Icon }) =>
-      <Link key={path} to={params.tripId ? '/trip/' + params.tripId + '/' + path : '/'} className={'nav-link' + (path === workspace ? ' active' : '')} aria-describedby={signals ? 'nav-status-' + path : undefined} aria-current={path === workspace ? 'page' : undefined} onClick={event => { event.preventDefault(); go(params.tripId ? '/trip/' + params.tripId + '/' + path : '/'); }}><Icon size={20} aria-hidden="true"/><span className="nav-label">{label}<span className="nav-signal" id={'nav-status-' + path} aria-hidden="true">{signals?.[path].text ?? ''}</span></span>{signals?.[path].pending && <span className="nav-dot" aria-hidden="true"/>}</Link>
-    )}</nav><div className="sidebar-note">毕业旅行<br/>本地工作副本</div></aside>
+    <aside className="sidebar"><Link className="brand" to="/" aria-label="同路"><Brand/></Link><nav aria-label="工作区">{navigation.map(({ path, label, Icon }) =>
+      <Link key={path} to={params.tripId ? '/trip/' + params.tripId + '/' + path : '/'} className={'nav-link' + (path === workspace ? ' active' : '')} aria-current={path === workspace ? 'page' : undefined} onClick={event => { event.preventDefault(); go(params.tripId ? '/trip/' + params.tripId + '/' + path : '/'); }}><Icon size={22} aria-hidden="true"/><span className="nav-label">{label}</span></Link>
+    )}</nav></aside>
     <div className="workspace">
-      <header className="topbar">
+      <header className="topbar"><div className="trip-switch">
         {state.records.length ? <Select label="选择旅行" value={params.tripId ?? ''} onChange={event => go('/trip/' + event.target.value + '/squad')}>
           {!currentRecord ? <option value="">选择旅行</option> : null}
-          {state.records.map(record => <option key={record.id} value={record.id}>{record.name}{record.isDemo ? ' · 示例' : ''}</option>)}
+          {state.records.map(record => <option key={record.id} value={record.id}>{record.name}</option>)}
         </Select> : state.loading ? <div className="trip-selector-placeholder" aria-hidden="true"/> : <strong>毕业旅行</strong>}
+        {trip?.isDemo ? <span className="demo-badge" title="示例旅行 · 成员与账目均为虚构">示例</span> : null}</div>
         <div className="toolbar">{trip ? <Status status={state.saveStatus}/> : null}
-          {trip ? <Button variant="secondary" onClick={() => setPanel({ type: 'share' })}><Share2 size={20}/>分享</Button> : null}
+          {trip ? <Button variant="ghost" onClick={() => setPanel({ type: 'share' })}><Share2 size={20}/>分享</Button> : null}
           <Menu label="更多"><Button variant="ghost" onClick={() => { const demo = state.records.find(record => record.isDemo); if (demo) go("/trip/" + demo.id + "/squad"); else void state.create("", true).then(result => { if (result.ok) navigate("/trip/" + result.value.id + "/squad"); }); }}>体验示例</Button><Button variant="ghost" onClick={() => openDialog('create')}><Plus size={20}/>创建旅行</Button>
             {trip ? <><Button variant="ghost" onClick={() => openDialog('rename')}>重命名</Button><Button variant="ghost" onClick={() => setPanel({ type: 'backup' })}>完整备份</Button>{trip.isDemo ? <Button variant="ghost" onClick={() => openDialog('reset')}>重置示例</Button> : null}</> : null}
             <Button variant="ghost" onClick={() => setPanel({ type: 'import' })}>导入</Button>
@@ -117,7 +116,7 @@ function Workbench({ runtime }: { runtime: Runtime }) {
         {state.saveStatus === 'conflict' && !state.error ? <ErrorNotice>其他标签页已更新。重新载入前请保留当前编辑内容。<div className="recovery-actions"><Button variant="secondary" onClick={() => void exportRaw()}>导出当前内容</Button><Button variant="secondary" onClick={state.reload}>重新载入</Button></div></ErrorNotice> : null}
         {state.loading ? <div aria-label="正在读取本地旅行" role="status"><div className="skeleton"/><div className="skeleton"/><div className="skeleton"/></div>
           : params.tripId && !trip ? <section className="empty-state"><h1>暂时无法打开此旅行</h1><p>请选择已有旅行，或导入备份恢复。</p><div className="toolbar"><Button onClick={() => setPanel({ type: 'import' })}>导入备份</Button>{currentRecord ? <Button variant="secondary" onClick={() => void exportRaw()}>导出原始内容</Button> : null}<Link to="/">返回旅行</Link></div></section>
-          : trip && props ? <div key={trip.id + ':' + state.reloadKey}>{trip.isDemo ? <p className="demo-notice">示例旅行 · 成员与账目均为虚构</p> : null}{Page ? <Suspense fallback={<div role="status" className="skeleton" aria-label="正在加载工作区"/>}><Page {...props}/></Suspense> : <Unavailable title={navigation.find(n => n.path === workspace)!.label}/>}</div>
+          : trip && props ? <div key={trip.id + ':' + state.reloadKey}>{Page ? <Suspense fallback={<div role="status" className="skeleton" aria-label="正在加载工作区"/>}><Page {...props}/></Suspense> : <Unavailable title={navigation.find(n => n.path === workspace)!.label}/>}</div>
           : <section className="empty-state"><h1>出发，从一支小队开始</h1><div className="recovery-actions"><Button onClick={() => openDialog('create')}><Plus size={20}/>创建旅行</Button><Button variant="secondary" onClick={() => void state.create('', true).then(result => { if (result.ok) navigate('/trip/' + result.value.id + '/squad'); })}>体验示例</Button></div></section>}
       </main>
     </div>

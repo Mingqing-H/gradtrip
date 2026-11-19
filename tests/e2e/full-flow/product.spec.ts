@@ -1,7 +1,8 @@
 import { test, expect, type Page } from '@playwright/test';
 import { readFile } from 'node:fs/promises';
 import type { Trip } from '../../../src/domain/types';
-async function openMenu(page: Page, label: string) { await page.locator('summary').click(); await page.getByRole('button', { name: label, exact: true }).click(); }
+import { addDays } from '../../../src/domain/dates';
+async function openMenu(page: Page, label: string) { await page.locator('.topbar summary').click(); await page.getByRole('button', { name: label, exact: true }).click(); }
 async function readTrip(page: Page, id = 'demo-trip'): Promise<Trip | null> {
   return page.evaluate(id => new Promise<Trip | null>((resolve, reject) => {
     const request = indexedDB.open('tonglu-gradtrip:' + encodeURIComponent(location.pathname));
@@ -15,7 +16,7 @@ async function readTrip(page: Page, id = 'demo-trip'): Promise<Trip | null> {
   }), id);
 }
 function decodeLink(url: string) { const encoded = new URLSearchParams(new URL(url).hash.split('?')[1]).get('data')!; return JSON.parse(Buffer.from(encoded, 'base64url').toString('utf8')); }
-async function demo(page: Page) { await page.goto('./'); await expect(page.getByRole('heading', { level: 1 })).toContainText('小队'); await expect(page.getByRole('button', { name: '邀请 周予安 填写', exact: true })).toBeVisible(); }
+async function demo(page: Page) { await page.goto('./'); await expect(page.getByRole('heading', { level: 1 })).toContainText('小队'); await expect(page.getByRole('button', { name: '编辑 周予安', exact: true })).toBeVisible(); }
 
 test('demo consensus, itinerary budget, partial expense allocation and settlement correction', async ({ page }) => {
   const errors: string[] = []; page.on('pageerror', error => errors.push(error.message));
@@ -69,6 +70,7 @@ test('demo consensus, itinerary budget, partial expense allocation and settlemen
 
 test('isolated invitation response, duplicate preview, backup overwrite, recovery and copy', async ({ page, browser }) => {
   await demo(page);
+  await page.getByRole('button', { name: '成员操作 周予安', exact: true }).click();
   await page.getByRole('button', { name: '邀请 周予安 填写', exact: true }).click();
   await page.getByRole('button', { name: '生成邀请链接', exact: true }).click();
   const inviteLink = await page.getByLabel('分享链接', { exact: true }).inputValue();
@@ -150,6 +152,7 @@ test('isolated invitation response, duplicate preview, backup overwrite, recover
 test('public snapshot stays read-only until copied, and excludes private members and expenses', async ({ page, browser }) => {
   await demo(page);
   await page.getByRole('link', { name: '方案', exact: true }).click();
+  await page.getByRole('article').filter({ has: page.getByRole('heading', { name: '苏州', exact: true }) }).getByRole('button', { name: '查看方案', exact: true }).click();
   await page.getByRole('button', { name: '分享方案', exact: true }).click();
   await page.getByRole('button', { name: '生成分享链接', exact: true }).click();
   const link = await page.getByLabel('分享链接', { exact: true }).inputValue();
@@ -183,16 +186,20 @@ test('a draft itinerary uses the explicit date range selected in its first activ
   await demo(page); await openMenu(page, '创建旅行');
   await page.getByLabel('旅行名称', { exact: true }).fill('草稿日期验收');
   await page.getByRole('dialog').getByRole('button', { name: '创建旅行', exact: true }).click();
+  await expect(page.getByRole('dialog')).not.toBeVisible();
   await expect(page.getByRole('heading', { level: 1 })).toContainText('小队');
   const id = page.url().split('/trip/')[1].split('/')[0];
+  const draft = await readTrip(page, id);
+  const start = addDays(draft!.searchWindow.start, 2);
+  const end = addDays(start, 2);
   await page.getByRole('link', { name: '日程', exact: true }).click();
   await page.getByRole('button', { name: '添加安排', exact: true }).first().click();
-  await page.getByLabel('日程开始日期', { exact: true }).fill('2026-12-18');
-  await page.getByLabel('日程结束日期', { exact: true }).fill('2026-12-20');
+  await page.getByLabel('日程开始日期', { exact: true }).fill(start);
+  await page.getByLabel('日程结束日期', { exact: true }).fill(end);
   await page.getByLabel('名称', { exact: true }).fill('自行安排');
-  await page.getByLabel('日期', { exact: true }).fill('2026-12-18');
+  await page.getByLabel('日期', { exact: true }).fill(start);
   await page.getByRole('button', { name: '保存安排', exact: true }).click();
   await expect(page.getByRole('dialog')).not.toBeVisible();
-  expect((await readTrip(page, id))?.itinerary.dateRange).toEqual({ start: '2026-12-18', end: '2026-12-20' });
+  expect((await readTrip(page, id))?.itinerary.dateRange).toEqual({ start, end });
   await page.reload(); await expect(page.getByText('自行安排', { exact: true })).toBeVisible();
 });

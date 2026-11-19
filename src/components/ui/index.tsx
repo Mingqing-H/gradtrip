@@ -51,7 +51,7 @@ export function Menu({ label, children }: { label: string; children: ReactNode }
 const statuses: Record<SaveStatus, string> = { saved: '已保存到此设备', saving: '正在保存…', unsaved: '尚未保存', conflict: '其他标签页已更新', memoryOnly: '临时体验 · 刷新后丢失' };
 export function Status({ status }: { status: SaveStatus }) {
   const Icon = status === 'saved' ? CircleCheck : status === 'saving' ? LoaderCircle : CircleAlert;
-  return <span role="status" aria-label="保存状态" className={`save-status status-${status}`}><Icon size={16} aria-hidden="true"/>{statuses[status]}</span>;
+  return <span role="status" aria-label="保存状态" title={statuses[status]} className={`save-status status-${status}`}><Icon size={18} aria-hidden="true"/>{status === 'saved' ? <><span aria-hidden="true">本地保存</span><span className="sr-only">{statuses[status]}</span></> : statuses[status]}</span>;
 }
 export function ErrorNotice({ children }: { children: ReactNode }) { return <div role="alert" className="error-notice">{children}</div>; }
 export { StatusChip, Avatar, TagChip, PageHeader, Sheet, StatStrip, Stat, Notice, Brand, ActionMenu, SegmentedControl } from './presentation';

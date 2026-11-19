@@ -9,7 +9,7 @@ import {
   CalendarPlus,
   ChevronDown,
   ChevronUp,
-  Clock3,
+  MessageSquare, Clock3,
   Bus, BedDouble, UtensilsCrossed, Camera, MapPin,
   Pencil,
   Plus,
@@ -39,6 +39,11 @@ type ActivityForm = {
 };
 
 const categoryIcons: Record<string, typeof Bus> = { '交通': Bus, '住宿': BedDouble, '餐饮': UtensilsCrossed, '活动': Camera };
+const dayArt = [
+  new URL('../../assets/illustrations/day-train.webp', import.meta.url).href,
+  new URL('../../assets/illustrations/day-beach.webp', import.meta.url).href,
+  new URL('../../assets/illustrations/day-suitcase.webp', import.meta.url).href,
+];
 const CATEGORIES = ['交通', '住宿', '餐饮', '活动', '其他'];
 
 function emptyForm(date: string, bucket: Activity['budgetBucket'] = 'activities'): ActivityForm {
@@ -77,6 +82,7 @@ export function ItineraryPage({ trip, execute, services }: WorkspaceProps) {
   const { activities, dateRange } = trip.itinerary;
   const dayRefs = useRef<Record<string, HTMLElement | null>>({});
   const [budgetOpen, setBudgetOpen] = useState(false);
+  const [noteActivity, setNoteActivity] = useState<Activity | null>(null);
   const [editing, setEditing] = useState<{ id: string | null } | null>(null);
   const [form, setForm] = useState<ActivityForm>(emptyForm(dateRange?.start ?? ''));
   const [draftRange, setDraftRange] = useState({ start: trip.searchWindow.start, end: addDays(trip.searchWindow.start, trip.duration - 1) });
@@ -188,7 +194,7 @@ export function ItineraryPage({ trip, execute, services }: WorkspaceProps) {
 
   return (
     <section className={styles.page}>
-      <PageHeader title="日程" subtitle={dateRange ? dateRange.start + ' 至 ' + dateRange.end + ' · ' + groups.length + ' 天' : '尚未绑定日期范围'} actions={<Button className="mobile-primary" onClick={() => openCreate(dateRange?.start ?? trip.searchWindow.start)} disabled={busy}><CalendarPlus size={20}/>添加安排</Button>}/>
+      <PageHeader title="日程" subtitle={dateRange ? dateRange.start.replaceAll('-', '.') + ' — ' + dateRange.end.slice(5).replace('-', '.') + ' · ' + groups.length + ' 天' : undefined} actions={<Button className="mobile-primary" onClick={() => openCreate(dateRange?.start ?? trip.searchWindow.start)} disabled={busy}><CalendarPlus size={20}/>添加安排</Button>}/>
       {groups.length > 0 && <nav className={styles.dayNav} aria-label="日程日期">{groups.map((group, index) => <button key={group.date} onClick={() => dayRefs.current[group.date]?.scrollIntoView({ block: 'start' })}>第 {index + 1} 天 <span>{group.date.slice(5)}</span></button>)}</nav>}
       {error !== null && <ErrorNotice>{error}</ErrorNotice>}
       {outOfRange.length > 0 && (
@@ -203,7 +209,7 @@ export function ItineraryPage({ trip, execute, services }: WorkspaceProps) {
       )}
 
       <div className={styles.layout}>
-        <div className={styles.timeline}>
+        <div className={styles.timeline} style={{ gridTemplateColumns: groups.length > 0 ? 'repeat(' + Math.min(groups.length, 3) + ', minmax(0, 1fr))' : undefined }}>
           {groups.length === 0 && (
             <div className="empty-state">
               <h2>还没有日程安排</h2>
@@ -214,10 +220,9 @@ export function ItineraryPage({ trip, execute, services }: WorkspaceProps) {
           {groups.map((group, dayIndex) => (
             <section key={group.date} ref={element => { dayRefs.current[group.date] = element; }} className={styles.day}>
               <header className={styles.dayHeading}>
-                <h2><span>第 {dayIndex + 1} 天</span> {group.date}</h2>
-                <Button variant="ghost" onClick={() => openCreate(group.date)}>
-                  <Plus size={18} /> 添加
-                </Button>
+                <div><h2>第 {dayIndex + 1} 天</h2><span className={styles.dayDate}>{group.date.slice(5).replace('-', '.')}</span></div>
+                <img className={styles.dayArt} src={dayArt[Math.min(dayIndex, dayArt.length - 1)]} width={360} height={270} alt="" loading="lazy" decoding="async"/>
+
               </header>
               {group.activities.length === 0 && (
                 <p className={`muted ${styles.emptyDay}`}>添加这天的安排</p>
@@ -247,9 +252,10 @@ export function ItineraryPage({ trip, execute, services }: WorkspaceProps) {
                       </span>
                       {overlapIds.has(activity.id) && <StatusChip tone="warning">时间重叠</StatusChip>}
                       {outOfRange.some(item => item.id === activity.id) && <StatusChip tone="danger">超出行程日期</StatusChip>}
-                      {activity.note !== '' && <span className={styles.note}>{activity.note}</span>}
+
                     </div>
                     <ActionMenu>
+                      {activity.note !== '' ? <Button variant="ghost" onClick={() => setNoteActivity(activity)}><MessageSquare size={18}/>查看备注</Button> : null}
                       <Button variant="ghost" onClick={() => openEdit(activity)}>
                         <Pencil size={18} /> 编辑
                       </Button>
@@ -275,45 +281,28 @@ export function ItineraryPage({ trip, execute, services }: WorkspaceProps) {
                   </li>
                 ); })}
               </ul>
+              <Button className={styles.addDay} variant="ghost" onClick={() => openCreate(group.date)}><Plus size={18}/>添加</Button>
             </section>
           ))}
         </div>
 
-        <aside className={styles.summary} aria-label="日程预算摘要" data-expanded={budgetExpanded}><button className={styles.budgetToggle} aria-expanded={budgetExpanded} onClick={() => setBudgetOpen(!budgetOpen)}>日程预算 · {formatMoney(budget.knownActivitiesTotal)} 已知活动<ChevronDown size={16}/></button><div className={styles.budgetDetail}>
-          <h2>预算摘要</h2>
-          {budget.perMember.some(row => row.baseEstimate !== null) ? <dl>{budget.perMember.filter(row => row.baseEstimate !== null).map(row => <div key={row.memberId}><dt>{trip.members.find(member => member.id === row.memberId)?.name}</dt><dd>方案 {formatMoney(row.baseEstimate!)} → {budget.complete ? '修订' : '已知部分'} {formatMoney(row.revisedEstimate!)}（差额 {formatMoney(row.revisedEstimate! - row.baseEstimate!)}）</dd></div>)}</dl> : null}
-          {plan ? <Button variant="secondary" onClick={() => setReplacing(true)}>重新使用方案日程</Button> : null}
-          <p className="muted">{plan ? '方案原活动分项 ' + formatMoney(budget.planActivitiesEstimate) : '方案活动基准待确认'}</p>
-          <p className="muted">当前已知活动合计 {formatMoney(budget.knownActivitiesTotal)}</p>
-          {budget.unknownActivityCount > 0 && (
-            <p className={styles.warn}>还有 {budget.unknownActivityCount} 项待估算</p>
-          )}
-          {budget.includedCount > 0 && (
-            <p className="muted">{budget.includedCount} 项费用已含于方案，不重复累计</p>
-          )}
-          {!budget.complete && (
-            <p className="muted">还有未估算的费用，当前显示已知部分。</p>
-          )}
-
-
-        </div>
-          {budget.perMember.some((row) => row.overBudget === true) && (
-            <div className={styles.warn}>
-              日程调整后超出成员预算，尚未重新征求意向。
-              <ul>
-                {budget.perMember
-                  .filter((row) => row.overBudget === true)
-                  .map((row) => (
-                    <li key={row.memberId}>
-                      {trip.members.find((member) => member.id === row.memberId)?.name ?? row.memberId}：
-                      修订估算 {formatMoney(row.revisedEstimate ?? 0)}
-                    </li>
-                  ))}
-              </ul>
-            </div>
-          )}
+        <aside className={styles.summary} aria-label="日程预算摘要" data-expanded={budgetExpanded}>
+          <div className={styles.budgetBand}><h2>全程活动估算</h2><strong>{formatMoney(budget.knownActivitiesTotal)}<small>/人</small></strong>
+            {!budget.complete ? <span>已知部分</span> : null}
+            {budget.unknownActivityCount > 0 ? <StatusChip tone="warning">{budget.unknownActivityCount}项待估算</StatusChip> : null}
+            {budget.includedCount > 0 ? <span>{budget.includedCount}项已含于方案</span> : null}
+            {!plan ? <span>方案基准待确认</span> : null}
+            <button className={styles.budgetToggle} aria-expanded={budgetExpanded} onClick={() => setBudgetOpen(!budgetOpen)}>预算明细<ChevronDown size={16}/></button>
+          </div>
+          {budgetExpanded ? <div className={styles.budgetDetail}>
+            {plan ? <p>方案原活动分项 {formatMoney(budget.planActivitiesEstimate)}</p> : null}
+            {budget.perMember.some(row => row.baseEstimate !== null) ? <dl>{budget.perMember.filter(row => row.baseEstimate !== null).map(row => <div key={row.memberId}><dt>{trip.members.find(member => member.id === row.memberId)?.name}</dt><dd>方案 {formatMoney(row.baseEstimate!)} → {budget.complete ? '修订' : '已知部分'} {formatMoney(row.revisedEstimate!)}（差额 {formatMoney(row.revisedEstimate! - row.baseEstimate!)}）</dd></div>)}</dl> : null}
+            {plan ? <Button variant="secondary" onClick={() => setReplacing(true)}>重新使用方案日程</Button> : null}
+          </div> : null}
+          {budget.perMember.some(row => row.overBudget === true) ? <div className={styles.warn}>日程调整后超出成员预算<ul>{budget.perMember.filter(row => row.overBudget === true).map(row => <li key={row.memberId}>{trip.members.find(member => member.id === row.memberId)?.name}：修订估算 {formatMoney(row.revisedEstimate ?? 0)}</li>)}</ul></div> : null}
         </aside>
       </div>
+      <Dialog open={noteActivity !== null} title={noteActivity?.title ?? '安排备注'} onClose={() => setNoteActivity(null)}><p>{noteActivity?.note}</p></Dialog>
 
       <Dialog open={replacing} title="替换现有日程？" onClose={() => setReplacing(false)} footer={<Button variant="danger" disabled={busy} onClick={() => { if (!plan) return; setBusy(true); void execute({ type: 'itinerary.replaceFromTemplate', planId: plan.id, confirmed: true }).then(result => { setBusy(false); if (result.ok) setReplacing(false); else setError(result.error.message); }); }}>确认替换日程</Button>}>
         <p>将覆盖 {activities.length} 项安排，手工修改会被替换。账本不受影响。</p>{error ? <ErrorNotice>{error}</ErrorNotice> : null}

@@ -10,7 +10,7 @@ async function createTrip(page: Page, name = '自动验收旅行') {
   await expect(page.getByRole('status', { name: '保存状态' })).toContainText('已保存到此设备');
 }
 async function menu(page: Page, name: string) {
-  await page.locator('summary').click(); await page.getByRole('button', { name, exact: true }).click();
+  await page.locator('.topbar summary').click(); await page.getByRole('button', { name, exact: true }).click();
 }
 test('create, rename, refresh, restore last workspace, keyboard dialog and delete last trip', async ({ page }) => {
   const errors: string[] = []; page.on('pageerror', error => errors.push(error.message));

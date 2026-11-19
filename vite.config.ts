@@ -9,12 +9,12 @@ function preloadInitialSquad(): Plugin {
       order: 'post',
       handler(html, { bundle }) {
         if (!bundle) return;
-        const image = (size: number) => {
-          const asset = Object.values(bundle).find(item => item.type === 'asset' && item.names.includes(`suzhou-${size}.webp`));
-          if (!asset) throw new Error(`Missing squad image ${size}`);
+        const image = () => {
+          const asset = Object.values(bundle).find(item => item.type === 'asset' && item.names.includes('travel-kit.webp'));
+          if (!asset) throw new Error('Missing travel-kit image');
           return base + asset.fileName;
         };
-        const script = `(()=>{const route=location.hash.split('?')[0];if(route&&route!=='#/'&&!/^#\\/trip\\/[^/]+\\/squad$/.test(route))return;const link=document.createElement('link');Object.assign(link,{rel:'preload',as:'image',fetchPriority:'high',href:matchMedia('(max-width: 767px)').matches?${JSON.stringify(image(240))}:${JSON.stringify(image(480))}});document.head.append(link)})();`;
+        const script = `(()=>{const route=location.hash.split('?')[0];if(route&&route!=='#/'&&!/^#\\/trip\\/[^/]+\\/squad$/.test(route))return;const link=document.createElement('link');Object.assign(link,{rel:'preload',as:'image',fetchPriority:'high',media:'(min-width: 1000px)',href:${JSON.stringify(image())}});document.head.append(link)})();`;
         // Run after viewport metadata and before stylesheets can block this script.
         if (!html.includes('</title>')) throw new Error('Missing document title');
         return { html: html.replace('</title>', `</title><script>${script}</script>`), tags: [] };

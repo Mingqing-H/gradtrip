@@ -30,32 +30,32 @@ export interface DestinationAsset {
 export const destinationAssets: Record<string, DestinationAsset> = {
   'asset-dest-qingdao': {
     assetId: 'asset-dest-qingdao', destinationId: 'dest-qingdao',
-    alt: '青岛海滨城市示意插画：木栈道、红顶老城与帆船', illustrative: true,
+    alt: '青岛生成示意景观：红瓦老城、树冠与海湾', illustrative: true,
     card: qingdao480, detail: qingdao960,
   },
   'asset-dest-suzhou': {
     assetId: 'asset-dest-suzhou', destinationId: 'dest-suzhou',
-    alt: '苏州园林城市示意插画：白墙黑瓦、石桥与运河', illustrative: true,
+    alt: '苏州生成示意景观：白墙黛瓦、石拱桥与河道', illustrative: true,
     card: suzhou480, detail: suzhou960,
   },
   'asset-dest-xiamen': {
     assetId: 'asset-dest-xiamen', destinationId: 'dest-xiamen',
-    alt: '厦门海岛城市示意插画：环岛路、灯塔与海湾', illustrative: true,
+    alt: '厦门生成示意景观：鼓浪屿别墅、榕树与花岗岩海岸', illustrative: true,
     card: xiamen480, detail: xiamen960,
   },
   'asset-dest-chengdu': {
     assetId: 'asset-dest-chengdu', destinationId: 'dest-chengdu',
-    alt: '成都城市示意插画：茶馆庭院、竹林与熊猫意象', illustrative: true,
+    alt: '成都生成示意景观：川西茶院、竹影与木门', illustrative: true,
     card: chengdu480, detail: chengdu960,
   },
   'asset-dest-xian': {
     assetId: 'asset-dest-xian', destinationId: 'dest-xian',
-    alt: '西安人文古城示意插画：城墙城楼与古塔剪影', illustrative: true,
+    alt: '西安生成示意景观：古城墙与传统城楼', illustrative: true,
     card: xian480, detail: xian960,
   },
   'asset-dest-dali': {
     assetId: 'asset-dest-dali', destinationId: 'dest-dali',
-    alt: '大理高原湖泊示意插画：雪山、洱海与白族村落', illustrative: true,
+    alt: '大理生成示意景观：白族村落、洱海与苍山', illustrative: true,
     card: dali480, detail: dali960,
   },
 };

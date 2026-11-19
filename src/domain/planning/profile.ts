@@ -17,9 +17,10 @@ export const BUDGET_CAP_MAX = 10_000_000;
  * 偏好可为空；预算为 null 表示未知，明确零预算是有效值。
  */
 export function getMemberProfileStatus(member: Pick<Member, 'name' | 'originCity' | 'budgetCap' | 'availability'>): MemberProfileStatus {
+  const name = normalizeText(member.name);
   const complete =
-    normalizeText(member.name).length >= 1 &&
-    normalizeText(member.name).length <= MEMBER_NAME_MAX &&
+    name.length >= 1 &&
+    name.length <= MEMBER_NAME_MAX &&
     member.originCity !== null &&
     normalizeText(member.originCity).length > 0 &&
     member.budgetCap !== null &&

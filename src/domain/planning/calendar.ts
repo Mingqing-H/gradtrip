@@ -16,11 +16,11 @@ export interface Ymd {
 /** 是否为格式合法且真实存在的公历日期。 */
 export function isValidDateOnly(value: unknown): value is DateOnly {
   if (typeof value !== 'string') return false;
-  const match = DATE_PATTERN.exec(value);
-  if (!match) return false;
-  const year = Number(match[1]);
-  const month = Number(match[2]);
-  const day = Number(match[3]);
+  if (!DATE_PATTERN.test(value)) return false;
+  // Validation needs no capture array; this runs for every availability endpoint.
+  const year = Number(value.slice(0, 4));
+  const month = Number(value.slice(5, 7));
+  const day = Number(value.slice(8, 10));
   return (
     year >= 1 &&
     month >= 1 &&

@@ -4,8 +4,8 @@ import { localDateOnly, isDateOnly } from '../../domain/dates';
 // P02 方案工作区：筛选、候选比较、方案详情（成员适配/估算/意向/确认）。
 // 所有业务查询通过 services.planning，所有写入通过 execute（扁平 CommandPayload）。
 import { useId, useMemo, useRef, useState } from 'react';
-import { Check, Minus, TriangleAlert, CalendarDays, Search, ChevronDown, ChevronRight } from 'lucide-react';
-import { Button, Drawer, ErrorNotice, Input, Select, PageHeader, StatusChip, Avatar, SegmentedControl } from '../../components/ui';
+import { TriangleAlert, CalendarDays, Search, ChevronDown, ArrowRight } from 'lucide-react';
+import { Button, Drawer, ErrorNotice, Input, Select, PageHeader, StatusChip, Avatar } from '../../components/ui';
 import type { Id, WorkspaceProps } from '../../contracts/services';
 import type { IntentValue, Plan } from '../../domain/types';
 import { formatMoney, parseMoney } from '../../domain/money';
@@ -186,21 +186,17 @@ export function PlansPage({ trip, execute, services, openShare }: WorkspaceProps
 
   return (
     <div className={styles.plansPage}>
-      <PageHeader title={<>方案 <StatusChip tone={statusKind === 'confirmed' ? 'success' : 'warning'}>{statusText}</StatusChip></>} subtitle={sortedPlans.length + ' 个候选，其中 ' + evaluations.filter(e => e.feasible).length + ' 个全员可行'} actions={<Button variant="secondary" onClick={() => openShare(trip.confirmation?.planId ?? trip.plans[0]?.id)} disabled={trip.plans.length === 0}>分享方案</Button>}/>
-      <button ref={filterToggleRef} className={styles.filterToggle} aria-expanded={filtersOpen} aria-controls={filterId} onClick={() => setFiltersOpen(open => !open)}>
-        <span><CalendarDays size={20}/>{departure || commonDates[0] || '选择日期'} · {duration} 天</span><span>{filtersOpen ? '收起' : '调整日期'}<ChevronDown size={16}/></span>
-      </button>
+      <PageHeader title={<>方案 {statusKind !== 'preparing' ? <StatusChip tone={statusKind === 'confirmed' ? 'success' : 'warning'}>{statusText}</StatusChip> : null}</>} subtitle={sortedPlans.length + ' 个候选 · ' + evaluations.filter(e => e.feasible).length + ' 个全员可行'} actions={<Button onClick={generatePlans} disabled={busy || trip.members.length === 0} aria-busy={busy}><Search size={20}/>{busy ? '生成中…' : '生成方案'}</Button>}/>
+      <div className={styles.filterBar}>
+        <Select label="出发日期" value={departure} onChange={event => setDeparture(event.target.value)}><option value="">自动（共同日期）</option>{commonDates.map(date => <option key={date} value={date}>{date}</option>)}</Select>
+        <Select label="出行时长" value={duration} onChange={event => setDuration(event.target.value)}>{[2,3,4,5].map(days => <option key={days} value={days}>{days}天{days - 1}晚</option>)}</Select>
+        <button ref={filterToggleRef} className={styles.filterToggle} aria-expanded={filtersOpen} aria-controls={filterId} onClick={() => setFiltersOpen(open => !open)}><CalendarDays size={18}/>{filtersOpen ? '收起日期' : '调整日期'}<ChevronDown size={16}/></button>
+        <span className={styles.destNote}>内置估算，非实时报价</span>
+      </div>
       <div className={styles.filters} id={filterId} data-expanded={filtersOpen}>
-        <Input label="窗口起日" type="date" value={windowStart} onChange={(e) => setWindowStart(e.target.value)} />
-        <Input label="窗口止日" type="date" value={windowEnd} onChange={(e) => setWindowEnd(e.target.value)} />
-        <SegmentedControl label="出行时长" value={duration} options={[2, 3, 4, 5].map(d => ({ value: String(d), label: d + '天' }))} onChange={setDuration}/>
-        <Select label="出发日期" value={departure} onChange={(e) => setDeparture(e.target.value)}>
-          <option value="">自动（共同日期）</option>
-          {commonDates.map((date) => <option key={date} value={date}>{date}</option>)}
-        </Select>
-        <div className={styles.filterActions}>
-          <Button onClick={generatePlans} disabled={busy || trip.members.length === 0} aria-busy={busy}><Search size={20} /> {busy ? '生成中…' : '生成方案'}</Button>
-        </div>
+        <Input label="窗口起日" type="date" value={windowStart} onChange={event => setWindowStart(event.target.value)}/>
+        <Input label="窗口止日" type="date" value={windowEnd} onChange={event => setWindowEnd(event.target.value)}/>
+        <span className={styles.formHint}>更改后点击“生成方案”应用</span>
       </div>
       {trip.members.length === 0 ? (
         <div className="empty-state"><p>先在“小队”添加成员，再生成候选方案。</p></div>
@@ -210,10 +206,10 @@ export function PlansPage({ trip, execute, services, openShare }: WorkspaceProps
         </div>
       ) : null}
       {submitError ? <ErrorNotice>{submitError}</ErrorNotice> : null}
-      <p className={styles.destNote}>内置估算，非实时报价</p>
+      <div className={styles.comparisonHead} aria-hidden="true"><span>目的地与行程</span><span>人均费用（估算）</span><span>约束条件</span><span>意向情况</span></div>
 
       <div className={styles.cards}>
-        {sortedPlans.map((plan, planIndex) => {
+        {sortedPlans.map((plan) => {
           const evalItem = evalById.get(plan.id);
           const asset = getDestinationAsset(plan.destinationId);
           const template = getDestinations(plan.templateVersion)?.find((t) => t.id === plan.destinationId);
@@ -226,28 +222,30 @@ export function PlansPage({ trip, execute, services, openShare }: WorkspaceProps
           for (const member of trip.members) intentCounts[intentLookup(member.id, plan.id, plan.version, trip.constraintRevision)?.value ?? 'pending']++;
 
           return (
-            <article className={styles.planCard} key={plan.id}>
+            <article className={styles.planCard} key={plan.id} data-destination={plan.destinationId}>
               <div className={styles.imageFrame}><span className={styles.imageFallback} aria-hidden="true">{template?.name ?? plan.destinationId}</span>{asset ? <img className={styles.cardImage} src={asset.card} alt={asset.alt} width={480} height={270} loading="lazy" decoding="async" onError={event => { event.currentTarget.hidden = true; }}/> : null}{asset?.illustrative && <span className={styles.stamp}>示意图</span>}</div>
               <div className={styles.cardBody}>
-                <div className={styles.cardTitle}><h2>{template?.name ?? plan.destinationId}</h2><span className={styles.cardMeta}>{String(planIndex + 1).padStart(2, '0')}</span></div>
-                <span className={styles.cardMeta}>{plan.startDate} 出发 · {plan.days} 天 {plan.days - 1} 晚</span>
-                <div className={styles.cardEstimate}>
-                  {min === null ? '估算待补充' : max === null ? formatMoney(min) : min === max ? formatMoney(min) : `${formatMoney(min)}～${formatMoney(max)} / 人`}
-                </div>
-                <span className={styles.cardMeta}>个人基准估算范围，非实时报价</span>
-                <div className={styles.ticketLine}/>
-                <ul className={styles.memberStrip} aria-label="成员适配">{evalItem?.members.map((fit, index) => { const member = trip.members.find(m => m.id === fit.memberId); const tone = fit.timeFits === false || fit.budgetFits === false ? 'danger' : fit.timeFits === null || fit.budgetFits === null ? 'warning' : 'success'; return <li key={fit.memberId} className={index > 7 ? 'sr-only' : ''}><span className={styles.fitAvatar} data-tone={tone}><span className={styles.fitBadge} aria-hidden="true">{tone === 'success' ? <Check size={10}/> : tone === 'danger' ? <TriangleAlert size={10}/> : <Minus size={10}/>}</span><Avatar name={member?.name ?? ''} index={trip.members.findIndex(m => m.id === fit.memberId)}/></span><span className="sr-only">{member?.name}：{fit.reasons.join('、') || '时间与预算满足'}</span></li>; })}{trip.members.length > 8 && <li aria-hidden="true">+{trip.members.length - 8}</li>}</ul>
-                <div className={styles.metrics}>
-                  <StatusChip tone={timePass === trip.members.length ? 'success' : evalItem?.members.some(m => m.timeFits === false) ? 'danger' : 'warning'}>时间 {timePass}/{trip.members.length}</StatusChip>
-                  <StatusChip tone={budgetPass === trip.members.length ? 'success' : evalItem?.members.some(m => m.budgetFits === false) ? 'danger' : 'warning'}>预算 {budgetPass}/{trip.members.length}</StatusChip>
-                  {incomplete > 0 ? <span className={styles.metricUnknown}>待补充 {incomplete}</span> : null}
-                </div>
-                <div className={styles.segmentBar} aria-hidden="true">{Object.entries(intentCounts).map(([key, count]) => <span key={key} data-intent={key} style={{ flex: count }}/>)}</div>
-                <div className={styles.intentLegend}>赞成 {intentCounts.approve} · 可接受 {intentCounts.acceptable} · 不参加 {intentCounts.decline} · 待反馈 {intentCounts.pending}</div>
-                <div className={styles.cardActions}>
-                  <Button variant="secondary" onClick={() => openDetail(plan.id)}>查看方案 <ChevronRight size={16} /></Button>
-                  {trip.confirmation?.planId === plan.id && statusKind === 'confirmed' ? <span className={styles.metricOk}>已确认</span> : null}
-                </div>
+                <h2>{template?.name ?? plan.destinationId}</h2>
+                <span className={styles.cardMeta}>{plan.startDate.slice(5).replace('-', '.')} 出发 · {plan.days}天{plan.days - 1}晚</span>
+                <div className={styles.cardEstimate}>{min === null ? '估算待补充' : max !== null && min !== max ? formatMoney(min).replace(/\.00$/, '') + ' – ' + formatMoney(max).replace(/^¥/, '').replace(/\.00$/, '') : formatMoney(min).replace(/\.00$/, '')}{min !== null ? <small>/人</small> : null}</div>
+              </div>
+              <div className={styles.metrics}>
+                {(['时间', '预算'] as const).map((label, index) => {
+                  const count = index === 0 ? timePass : budgetPass;
+                  const conflict = evalItem?.members.filter(member => (index === 0 ? member.timeFits : member.budgetFits) === false).length ?? 0;
+                  const tone = count === trip.members.length && trip.members.length > 0 ? 'success' : conflict > 0 ? 'danger' : 'warning';
+                  return <div className={styles.fitMetric} data-tone={tone} key={label}>
+                    <div className={styles.fitLabel}><span>{label} {count}/{trip.members.length}</span>{conflict > 0 ? <span className={styles.fitWarning}><TriangleAlert size={14}/>{conflict}人{index === 0 ? '日期冲突' : '超预算'}</span> : null}</div>
+                    <div className={styles.fitTrack} role="progressbar" aria-label={label + '满足人数'} aria-valuemin={0} aria-valuemax={Math.max(1, trip.members.length)} aria-valuenow={count}><span style={{ width: (trip.members.length ? count / trip.members.length * 100 : 0) + '%' }}/></div>
+                  </div>;
+                })}
+                {incomplete > 0 ? <span className={styles.metricUnknown}>{incomplete}人待补资料</span> : null}
+                <ul className="sr-only" aria-label="成员适配">{evalItem?.members.map(fit => <li key={fit.memberId}>{trip.members.find(member => member.id === fit.memberId)?.name}：{fit.reasons.join('、') || '时间与预算满足'}</li>)}</ul>
+              </div>
+              <div className={styles.intentArea}>
+                <div className={styles.intentLegend}>{intentCounts.approve > 0 ? '赞成' + intentCounts.approve + ' · ' : ''}{intentCounts.acceptable > 0 ? '可接受' + intentCounts.acceptable + ' · ' : ''}{intentCounts.decline > 0 ? '不参加' + intentCounts.decline + ' · ' : ''}待反馈{intentCounts.pending}</div>
+                <Button variant="ghost" onClick={() => openDetail(plan.id)}>查看方案<ArrowRight size={18}/></Button>
+                {trip.confirmation?.planId === plan.id && statusKind === 'confirmed' ? <StatusChip tone="success">已确认</StatusChip> : null}
               </div>
             </article>
           );
@@ -257,6 +255,7 @@ export function PlansPage({ trip, execute, services, openShare }: WorkspaceProps
       <Drawer open={selectedPlan !== null} title={selectedPlan ? (getDestinations(selectedPlan.templateVersion)?.find((t) => t.id === selectedPlan.destinationId)?.name ?? '方案详情') : '方案详情'}
         onClose={() => setSelectedPlanId(null)}
         footer={<>
+          {selectedPlan ? <Button variant="ghost" onClick={() => { setSelectedPlanId(null); openShare(selectedPlan.id); }}>分享方案</Button> : null}
           <Button variant="secondary" onClick={() => setSelectedPlanId(null)}>关闭</Button>
           {selectedPlan && !consensus?.confirmed ? <Button onClick={confirm} disabled={busy || !consensus?.canConfirm}>{busy ? '确认中…' : '确认此方案'}</Button> : <Link className="button button-primary" to={'/trip/' + trip.id + '/itinerary'}>查看日程</Link>}
         </>}>

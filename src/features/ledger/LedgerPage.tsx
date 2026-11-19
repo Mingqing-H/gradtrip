@@ -20,6 +20,8 @@ import {
 import type { Expense, WorkspaceProps } from '../../contracts/services';
 import styles from './LedgerPage.module.css';
 
+const notebookArt = new URL('../../assets/illustrations/ledger-notebook.webp', import.meta.url).href;
+
 type SplitMode = 'equal' | 'custom';
 
 type ExpenseForm = {
@@ -49,7 +51,7 @@ function emptyForm(trip: WorkspaceProps['trip']): ExpenseForm {
 }
 
 export function LedgerPage({ trip, execute }: WorkspaceProps) {
-  const [tab, setTab] = useState<'expenses' | 'settlement'>('expenses');
+  const [tab, setTab] = useState<'expenses' | 'settlement'>('settlement');
   const [form, setForm] = useState<ExpenseForm | null>(null);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -369,55 +371,34 @@ export function LedgerPage({ trip, execute }: WorkspaceProps) {
       )}
 
       {tab === 'settlement' && (
-        <div className={styles.panel} role="tabpanel" id="settlement-panel" aria-labelledby="settlement-tab">
-          <h2>成员余额</h2>
-          {summary.balances.every((row) => row.balance === 0) && summary.expenseCount > 0 && (
-            <p className={styles.settled}>当前已结清</p>
-          )}
-          <ul className={styles.balanceList}>{summary.balances.map(row => {
-            const maximum = Math.max(1, ...summary.balances.map(item => Math.abs(item.balance)));
-            return <li key={row.memberId}><div className={styles.balanceRow}><span className={styles.balanceName}><Avatar name={nameOf(row.memberId)} index={trip.members.findIndex(m => m.id === row.memberId)}/>{nameOf(row.memberId)}</span><span className={styles.balanceTrack} aria-hidden="true"><span className={row.balance < 0 ? styles.negativeBar : styles.positiveBar} style={{ width: row.balance === 0 ? 0 : 'max(2px, ' + Math.abs(row.balance) / maximum * 50 + '%)' }}/></span><strong>{row.balance > 0 ? '应收 ' + formatMoney(row.balance) : row.balance < 0 ? '应付 ' + formatMoney(-row.balance) : '已结清'}</strong><Button variant="ghost" aria-expanded={expandedRows.has('balance-' + row.memberId)} onClick={() => toggleRow('balance-' + row.memberId)}>明细</Button></div>{expandedRows.has('balance-' + row.memberId) && <div className={styles.balanceDetail}><span>已付 {formatMoney(row.paid)}</span><span>应承担 {formatMoney(row.owed)}</span><span>已转出 {formatMoney(row.sent)}</span><span>已转入 {formatMoney(row.received)}</span></div>}</li>;
-          })}</ul>
-
-          <h2>转账建议</h2>
-          <p className="muted">仅为减少操作的建议，不承诺最少笔数。</p>
-          {suggestions.length === 0 ? (
-            <p className={styles.settled}>{summary.expenseCount === 0 ? '暂无费用，没有转账建议' : '当前没有待转账建议'}</p>
-          ) : (
-            <ul className={styles.suggestions}>
-              {suggestions.map((suggestion) => (
-                <li key={`${suggestion.fromId}-${suggestion.toId}`}>
-                  <span>
-                    {nameOf(suggestion.fromId)} <ArrowRight size={16} /> {nameOf(suggestion.toId)}
-                  </span>
-                  <strong>{formatMoney(suggestion.amount)}</strong>
-                  <Button variant="secondary" onClick={() => openTransfer(suggestion)} disabled={busy}>
-                    记录已转账
-                  </Button>
-                </li>
-              ))}
-            </ul>
-          )}
-
-          <h2>结算记录</h2>
-          {trip.settlements.length === 0 ? (
-            <p className="muted">还没有结算记录。</p>
-          ) : (
-            <ul className={styles.settlements}>
-              {trip.settlements.map((settlement) => (
-                <li key={settlement.id}>
-                  {nameOf(settlement.fromId)} → {nameOf(settlement.toId)} · {formatMoney(settlement.amount)} ·{' '}
-                  <StatusChip tone={settlement.voidedAt === null ? 'success' : 'neutral'}>{settlement.voidedAt === null ? '已记录' : '已撤销（不计入余额）'}</StatusChip>
-                </li>
-              ))}
-            </ul>
-          )}
-          {trip.settlements.some((settlement) => settlement.voidedAt === null) && (
-            <Button variant="danger" onClick={() => setConfirmVoid(true)} disabled={busy}>
-              <RotateCcw size={18} /> 撤销全部结算记录
-            </Button>
-          )}
-          <p className="muted">撤销只移除本地记录效力，真实线下转账不会被撤回。撤销后可更正费用并按真实情况重新登记。</p>
+        <div className={styles.settlementPanel} role="tabpanel" id="settlement-panel" aria-labelledby="settlement-tab">
+          <section className={styles.membersSection}>
+            <h2>成员余额</h2>
+            <p className={styles.settlementTotal}>实际支出 {formatMoney(summary.totalExpense)} · {summary.expenseCount} 笔</p>
+            <div className={styles.balanceHead} aria-hidden="true"><span>成员</span><span>已垫付</span><span>当前余额</span><span/></div>
+            <ul className={styles.balanceList}>{summary.balances.map(row => <li key={row.memberId}>
+              <div className={styles.balanceRow}>
+                <span className={styles.balanceName}><Avatar name={nameOf(row.memberId)} index={trip.members.findIndex(member => member.id === row.memberId)}/>{nameOf(row.memberId)}</span>
+                <span className={styles.paid}>{formatMoney(row.paid)}</span>
+                <strong className={styles.balanceChip} data-direction={row.balance > 0 ? 'receive' : row.balance < 0 ? 'pay' : 'settled'}>{row.balance > 0 ? '应收 ' + formatMoney(row.balance) : row.balance < 0 ? '应付 ' + formatMoney(-row.balance) : '已结清'}</strong>
+                <Button variant="ghost" className="icon-button" aria-label={'查看 ' + nameOf(row.memberId) + ' 余额明细'} aria-expanded={expandedRows.has('balance-' + row.memberId)} onClick={() => toggleRow('balance-' + row.memberId)}><ChevronDown size={16}/></Button>
+              </div>
+              {expandedRows.has('balance-' + row.memberId) ? <div className={styles.balanceDetail}><span>已付 {formatMoney(row.paid)}</span><span>应承担 {formatMoney(row.owed)}</span><span>已转出 {formatMoney(row.sent)}</span><span>已转入 {formatMoney(row.received)}</span></div> : null}
+            </li>)}</ul>
+          </section>
+          <section className={styles.transferSection}>
+            <header className={styles.transferHeading}><h2>转账建议</h2><span>仅记录线下确认</span></header>
+            {suggestions.length === 0 ? <p className={styles.settled}>{summary.expenseCount === 0 ? '暂无费用' : '当前已结清'}</p> : <ul className={styles.suggestions}>{suggestions.map(suggestion => <li key={suggestion.fromId + '-' + suggestion.toId}>
+              <span className={styles.transferPeople}><span className={styles.transferPerson} data-tone={trip.members.findIndex(member => member.id === suggestion.fromId) % 6}>{nameOf(suggestion.fromId)}</span><ArrowRight size={16}/><span className={styles.transferPerson} data-tone={trip.members.findIndex(member => member.id === suggestion.toId) % 6}>{nameOf(suggestion.toId)}</span></span>
+              <strong>{formatMoney(suggestion.amount)}</strong>
+              <Button variant="ghost" onClick={() => openTransfer(suggestion)} disabled={busy}>记录已转账</Button>
+            </li>)}</ul>}
+            {trip.settlements.length > 0 ? <details className={styles.history}><summary><ChevronDown size={16}/>结算记录 · {trip.settlements.filter(settlement => settlement.voidedAt === null).length}笔有效</summary>
+              <ul className={styles.settlements}>{trip.settlements.map(settlement => <li key={settlement.id}>{nameOf(settlement.fromId)} → {nameOf(settlement.toId)} · {formatMoney(settlement.amount)} · <StatusChip tone={settlement.voidedAt === null ? 'success' : 'neutral'}>{settlement.voidedAt === null ? '已记录' : '已撤销'}</StatusChip></li>)}</ul>
+            </details> : null}
+            {summary.hasActiveSettlement ? <Button className={styles.voidButton} variant="ghost" onClick={() => setConfirmVoid(true)} disabled={busy}><RotateCcw size={16}/>撤销全部结算记录</Button> : null}
+            <img className={styles.notebookArt} src={notebookArt} width={280} height={280} alt="" loading="lazy" decoding="async"/>
+          </section>
         </div>
       )}
 

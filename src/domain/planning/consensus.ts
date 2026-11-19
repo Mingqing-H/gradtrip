@@ -5,7 +5,7 @@
 // - 派生状态只有 筹备中 / 已确认 / 待重新确认，按数据求值，不允许直接写入。
 
 import { compareDateOnly } from './calendar';
-import { evaluateMemberAgainstPlan, getCurrentIntent, createIntentLookup } from './evaluation';
+import { evaluateMembersAgainstPlan, getCurrentIntent, createIntentLookup } from './evaluation';
 import { getMissingProfileFields } from './profile';
 import type { DateOnly, Id, Intent, Member, Plan, Trip } from './contract';
 import type { ConfirmationBlocker, ConsensusStatus, PlanningContext, PlanningDeps } from './types';
@@ -40,8 +40,10 @@ export function getConfirmationBlockers(
     blockers.push({ kind: 'date-invalid', message: '出发日期不得早于操作当天' });
   }
 
-  for (const member of members) {
-    const status = evaluateMemberAgainstPlan(member, plan, deps);
+  const memberStatuses = evaluateMembersAgainstPlan(members, plan, deps);
+  for (let index = 0; index < members.length; index += 1) {
+    const member = members[index];
+    const status = memberStatuses[index];
     if (status.profile === 'incomplete') {
       const missing = getMissingProfileFields(member);
       blockers.push({
@@ -147,7 +149,7 @@ export function getConsensusStatus(context: PlanningContext, deps: PlanningDeps)
 
   const conditionsHold =
     context.members.length >= MIN_MEMBERS_TO_CONFIRM &&
-    context.members.every((member) => evaluateMemberAgainstPlan(member, plan, deps).overall === 'pass');
+    evaluateMembersAgainstPlan(context.members, plan, deps).every(status => status.overall === 'pass');
   if (!conditionsHold) {
     return {
       status: 'needsReconfirm',
